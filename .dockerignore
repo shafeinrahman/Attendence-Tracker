@@ -1,0 +1,9 @@
+node_modules
+web/node_modules
+web/.next
+android/.gradle
+android/build
+android/*/build
+.git
+.env
+.env.local

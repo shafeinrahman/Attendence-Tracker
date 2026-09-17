@@ -1,0 +1,124 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+model Semester {
+  id                 String          @id @default(uuid())
+  name               String          // e.g. "Fall 2026"
+  startDate          DateTime        @map("start_date")
+  endDate            DateTime        @map("end_date")
+  midtermWeekStart   DateTime?       @map("midterm_week_start")
+  midtermWeekEnd     DateTime?       @map("midterm_week_end")
+  purgeAt            DateTime        @map("purge_at") // endDate + 7 days
+  purged             Boolean         @default(false)
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  courses            Course[]
+  geofence           CampusGeofence?
+  holidays           Holiday[]
+
+  @@map("semesters")
+}
+
+model Course {
+  id                 String          @id @default(uuid())
+  semesterId         String          @map("semester_id")
+  code               String          // e.g. "CSE331"
+  name               String
+  category           String          // "theory" | "lab" | "unclassified"
+  categorySource     String          @default("inferred") @map("category_source") // "inferred" | "manual"
+  thresholdPct       Float           @default(70.0) @map("threshold_pct") // 70 for theory, 90 for lab
+
+  semester           Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  slots              ClassSlot[]
+
+  @@map("courses")
+}
+
+enum SessionMode {
+  in_person
+  online
+}
+
+model ClassSlot {
+  id                 String             @id @default(uuid())
+  courseId           String             @map("course_id")
+  dayOfWeek          Int                @map("day_of_week") // 1 = Monday ... 7 = Sunday
+  startTime          String             @map("start_time") // "09:30"
+  endTime            String             @map("end_time")   // "11:00"
+  roomCode           String             @map("room_code")  // "402C", "L-201L"
+  recurring          Boolean            @default(true)
+  specificDate       DateTime?          @map("specific_date")
+  sessionMode        SessionMode        @default(in_person) @map("session_mode")
+  makeupForRecordId  String?            @map("makeup_for_record_id")
+
+  course             Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  attendanceRecords  AttendanceRecord[]
+  makeupForRecord    AttendanceRecord?  @relation("MakeupLink", fields: [makeupForRecordId], references: [id], onDelete: SetNull)
+
+  @@map("class_slots")
+}
+
+enum AttendanceStatus {
+  present
+  running_late
+  cancelled_holiday
+  absent
+  excused
+}
+
+enum AttendanceSource {
+  phone
+  desktop
+  default
+}
+
+model AttendanceRecord {
+  id                 String             @id @default(uuid())
+  classSlotId        String             @map("class_slot_id")
+  date               DateTime           @db.Date
+  status             AttendanceStatus
+  countedInStats     Boolean            @default(true) @map("counted_in_stats")
+  isFirstWeek        Boolean            @default(false) @map("is_first_week")
+  isMidtermWeek      Boolean            @default(false) @map("is_midterm_week")
+  isBulkSkip         Boolean            @default(false) @map("is_bulk_skip")
+  loggedAt           DateTime           @default(now()) @map("logged_at")
+  source             AttendanceSource   @default(phone)
+
+  classSlot          ClassSlot          @relation(fields: [classSlotId], references: [id], onDelete: Cascade)
+  makeupSlots        ClassSlot[]        @relation("MakeupLink")
+
+  @@unique([classSlotId, date])
+  @@map("attendance_records")
+}
+
+model CampusGeofence {
+  id                 String             @id @default(uuid())
+  semesterId         String             @unique @map("semester_id")
+  latitude           Float
+  longitude          Float
+  radiusMeters       Float              @default(300.0) @map("radius_meters")
+
+  semester           Semester           @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  @@map("campus_geofences")
+}
+
+model Holiday {
+  id                 String             @id @default(uuid())
+  semesterId         String             @map("semester_id")
+  date               DateTime           @db.Date
+  label              String?
+
+  semester           Semester           @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  @@unique([semesterId, date])
+  @@map("holidays")
+}
