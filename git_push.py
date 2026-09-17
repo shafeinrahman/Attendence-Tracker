@@ -84,10 +84,12 @@ def main():
 
     action = input("Push or pull? [push/pull] (default push): ").strip().lower() or "push"
 
-    branch = subprocess.run(
+    current_branch = subprocess.run(
         ["git", "branch", "--show-current"],
         capture_output=True, text=True
     ).stdout.strip() or "main"
+
+    branch = input(f"Branch [{current_branch}]: ").strip() or current_branch
 
     if action == "pull":
         run(["git", "pull", auth_url, branch])
