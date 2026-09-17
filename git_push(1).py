@@ -84,14 +84,15 @@ def main():
 
     action = input("Push or pull? [push/pull] (default push): ").strip().lower() or "push"
 
-    current_branch = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True, text=True
-    ).stdout.strip() or "main"
-
-    branch = input(f"Branch [{current_branch}]: ").strip() or current_branch
+    def get_current_branch(default="main"):
+        return subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True, text=True
+        ).stdout.strip() or default
 
     if action == "pull":
+        current_branch = get_current_branch()
+        branch = input(f"Branch [{current_branch}]: ").strip() or current_branch
         run(["git", "pull", auth_url, branch])
         print("Done.")
         return
@@ -104,6 +105,12 @@ def main():
     commit_result = run(["git", "commit", "-m", commit_msg], check=False)
     if commit_result != 0:
         print("Nothing to commit (working tree clean) — continuing to push.")
+
+    # Determine branch AFTER committing: before the first commit, HEAD
+    # is unborn and --show-current returns nothing, so guessing here
+    # can pick the wrong name (e.g. "main" when git actually uses "master").
+    current_branch = get_current_branch()
+    branch = input(f"Branch [{current_branch}]: ").strip() or current_branch
 
     rc = run(["git", "push", auth_url, branch], check=False)
 
