@@ -12,14 +12,18 @@
     "db:generate": "prisma generate",
     "db:seed": "node scripts/seed.js",
     "test": "vitest run",
-    "purge:cron": "node scripts/purge-cron.js"
+    "purge:cron": "node scripts/purge-cron.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "jose": "^6.2.12",
     "lucide-react": "^0.453.0",
     "next": "^16.3.5",
+    "next-auth": "^5.0.0-beta.32",
     "pdf-parse": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -27,6 +31,7 @@
     "tesseract.js": "^5.1.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.17.0",
     "@types/pdf-parse": "^1.1.4",
     "@types/react": "^18.3.11",

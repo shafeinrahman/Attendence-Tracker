@@ -8,8 +8,23 @@ CREATE TYPE "AttendanceStatus" AS ENUM ('present', 'running_late', 'cancelled_ho
 CREATE TYPE "AttendanceSource" AS ENUM ('phone', 'desktop', 'default');
 
 -- CreateTable
+CREATE TABLE IF NOT EXISTS "users" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password_hash" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users"("email");
+
+-- CreateTable
 CREATE TABLE IF NOT EXISTS "semesters" (
     "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "start_date" TIMESTAMP(3) NOT NULL,
     "end_date" TIMESTAMP(3) NOT NULL,
@@ -101,6 +116,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "holidays_semester_id_date_key" ON "holidays"(
 -- AddForeignKey
 DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'semesters_user_id_fkey') THEN
+        ALTER TABLE "semesters" ADD CONSTRAINT "semesters_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'courses_semester_id_fkey') THEN
         ALTER TABLE "courses" ADD CONSTRAINT "courses_semester_id_fkey" FOREIGN KEY ("semester_id") REFERENCES "semesters"("id") ON DELETE CASCADE ON UPDATE CASCADE;
     END IF;

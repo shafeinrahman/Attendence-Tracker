@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySemesterOwnership } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { searchParams } = new URL(req.url);
     const semesterId = searchParams.get("semesterId");
 
+    if (semesterId) {
+      const ownership = await verifySemesterOwnership(semesterId, user.id);
+      if (!ownership.authorized) {
+        return ownership.errorResponse;
+      }
+    }
+
     const courses = await prisma.course.findMany({
-      where: semesterId ? { semesterId } : { semester: { purged: false } },
+      where: semesterId
+        ? { semesterId, semester: { userId: user.id } }
+        : { semester: { userId: user.id, purged: false } },
       include: {
         slots: true,
       },
@@ -25,8 +35,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -39,13 +50,18 @@ export async function POST(req: NextRequest) {
     let targetSemesterId = semesterId;
     if (!targetSemesterId) {
       const active = await prisma.semester.findFirst({
-        where: { purged: false },
+        where: { userId: user.id, purged: false },
         orderBy: { createdAt: "desc" },
       });
       if (!active) {
         return NextResponse.json({ error: "No active semester found" }, { status: 400 });
       }
       targetSemesterId = active.id;
+    } else {
+      const ownership = await verifySemesterOwnership(targetSemesterId, user.id);
+      if (!ownership.authorized) {
+        return ownership.errorResponse;
+      }
     }
 
     const course = await prisma.course.create({

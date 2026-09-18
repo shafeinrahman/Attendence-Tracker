@@ -32,8 +32,24 @@ class PreferencesManager(context: Context) {
         }
 
     var apiToken: String
-        get() = sharedPreferences.getString(KEY_API_TOKEN, "attendance-secret-token-12345") ?: "attendance-secret-token-12345"
+        get() = sharedPreferences.getString(KEY_API_TOKEN, "") ?: ""
         set(value) = sharedPreferences.edit().putString(KEY_API_TOKEN, value.trim()).apply()
+
+    var userEmail: String
+        get() = sharedPreferences.getString(KEY_USER_EMAIL, "") ?: ""
+        set(value) = sharedPreferences.edit().putString(KEY_USER_EMAIL, value.trim()).apply()
+
+    val isLoggedIn: Boolean
+        get() = apiToken.isNotBlank()
+
+    fun logout() {
+        sharedPreferences.edit()
+            .remove(KEY_API_TOKEN)
+            .remove(KEY_USER_EMAIL)
+            .remove(KEY_INSIDE_CAMPUS)
+            .remove(KEY_LAST_SYNC)
+            .apply()
+    }
 
     var isInsideCampus: Boolean
         get() = sharedPreferences.getBoolean(KEY_INSIDE_CAMPUS, false)
@@ -46,6 +62,7 @@ class PreferencesManager(context: Context) {
     companion object {
         private const val KEY_BASE_URL = "api_base_url"
         private const val KEY_API_TOKEN = "api_token"
+        private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_INSIDE_CAMPUS = "is_inside_campus"
         private const val KEY_LAST_SYNC = "last_sync_timestamp"
     }

@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySemesterOwnership } from "@/lib/auth";
 import { calculateCourseStats } from "@/lib/attendance-calculator";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { searchParams } = new URL(req.url);
     const format = searchParams.get("format") || "json"; // "json" | "csv"
+    const semesterId = searchParams.get("semesterId");
+
+    if (semesterId) {
+      const ownership = await verifySemesterOwnership(semesterId, user.id);
+      if (!ownership.authorized) return ownership.errorResponse;
+    }
 
     const activeSemester = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: semesterId
+        ? { id: semesterId, userId: user.id }
+        : { userId: user.id, purged: false },
       include: {
         geofence: true,
         holidays: true,
@@ -64,7 +73,6 @@ export async function GET(req: NextRequest) {
     });
 
     if (format === "csv") {
-      // Build CSV
       const rows: string[] = [];
       rows.push("CourseCode,CourseName,Category,Threshold,Date,Status,CountedInStats,Source");
 

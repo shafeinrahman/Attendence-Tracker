@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifyCourseOwnership } from "@/lib/auth";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { id } = await params;
+    const ownership = await verifyCourseOwnership(id, user.id);
+    if (!ownership.authorized) {
+      return ownership.errorResponse;
+    }
+
     const body = await req.json();
     const { name, code, category, thresholdPct } = body;
 
@@ -45,11 +51,17 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { id } = await params;
+    const ownership = await verifyCourseOwnership(id, user.id);
+    if (!ownership.authorized) {
+      return ownership.errorResponse;
+    }
+
     await prisma.course.delete({
       where: { id },
     });

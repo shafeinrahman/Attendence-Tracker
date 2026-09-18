@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyApiToken, extractTokenFromRequest } from "@/lib/auth";
+import { extractTokenFromRequest, verifyJwtToken } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  // Support either auth token or Vercel Cron header (CRON_SECRET)
-  const token = extractTokenFromRequest(req);
+  // Support either Vercel Cron header (CRON_SECRET) or valid JWT
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
+  const token = extractTokenFromRequest(req);
 
-  const isCronAuthorized =
-    verifyApiToken(token) ||
-    (cronSecret && authHeader === `Bearer ${cronSecret}`);
+  let isAuthorized = false;
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    isAuthorized = true;
+  } else if (token) {
+    const verified = await verifyJwtToken(token);
+    if (verified) isAuthorized = true;
+  }
 
-  if (!isCronAuthorized) {
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized cron execution" }, { status: 401 });
   }
 
@@ -30,7 +34,7 @@ export async function GET(req: NextRequest) {
     const purgedIds: string[] = [];
 
     for (const semester of dueSemesters) {
-      // 1. Delete associated data
+      // Delete child records strictly belonging to this expired semester
       await prisma.holiday.deleteMany({ where: { semesterId: semester.id } });
       await prisma.campusGeofence.deleteMany({ where: { semesterId: semester.id } });
 

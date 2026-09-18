@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifyCourseOwnership } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -13,8 +14,16 @@ export async function GET(req: NextRequest) {
 
     let slots;
     if (courseId) {
+      const ownership = await verifyCourseOwnership(courseId, user.id);
+      if (!ownership.authorized) {
+        return ownership.errorResponse;
+      }
+
       slots = await prisma.classSlot.findMany({
-        where: { courseId },
+        where: {
+          courseId,
+          course: { semester: { userId: user.id } },
+        },
         include: { course: true },
         orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
       });
@@ -22,7 +31,7 @@ export async function GET(req: NextRequest) {
       slots = await prisma.classSlot.findMany({
         where: {
           course: {
-            semester: { purged: false },
+            semester: { userId: user.id, purged: false },
           },
         },
         include: { course: true },
@@ -53,8 +62,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -75,6 +85,11 @@ export async function POST(req: NextRequest) {
         { error: "courseId, startTime, and endTime are required" },
         { status: 400 }
       );
+    }
+
+    const ownership = await verifyCourseOwnership(courseId, user.id);
+    if (!ownership.authorized) {
+      return ownership.errorResponse;
     }
 
     let calculatedDayOfWeek = dayOfWeek;

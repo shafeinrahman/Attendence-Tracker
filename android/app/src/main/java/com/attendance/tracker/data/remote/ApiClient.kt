@@ -9,19 +9,20 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-class ApiClient(private val context: Context) {
+class ApiClient(private val context: Context? = null) {
 
-    private val prefs = PreferencesManager(context)
+    fun getService(customBaseUrl: String? = null): ApiService {
+        val prefs = context?.let { PreferencesManager(it) }
 
-    fun getService(): ApiService {
         val authInterceptor = Interceptor { chain ->
             val original = chain.request()
-            val token = prefs.apiToken
+            val token = prefs?.apiToken ?: ""
             val requestBuilder = original.newBuilder()
-                .header("Authorization", "Bearer $token")
-                .header("x-api-token", token)
-                .method(original.method, original.body)
-
+            if (token.isNotBlank()) {
+                requestBuilder.header("Authorization", "Bearer $token")
+                requestBuilder.header("x-api-token", token)
+            }
+            requestBuilder.method(original.method, original.body)
             chain.proceed(requestBuilder.build())
         }
 
@@ -36,13 +37,35 @@ class ApiClient(private val context: Context) {
             .readTimeout(15, TimeUnit.SECONDS)
             .build()
 
-        val baseUrl = prefs.apiBaseUrl
+        val baseUrl = customBaseUrl ?: prefs?.apiBaseUrl ?: "http://10.0.2.2:3000/"
+        val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
 
         return Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl(normalizedUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)
+    }
+
+    companion object {
+        fun create(baseUrl: String): ApiService {
+            val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+            val logging = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+            val client = OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .build()
+
+            return Retrofit.Builder()
+                .baseUrl(normalizedUrl)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(ApiService::class.java)
+        }
     }
 }

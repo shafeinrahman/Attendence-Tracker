@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySemesterOwnership } from "@/lib/auth";
 
 interface CommitSlotPayload {
   courseCode: string;
@@ -15,8 +15,9 @@ interface CommitSlotPayload {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -32,22 +33,25 @@ export async function POST(req: NextRequest) {
     let targetSemesterId = semesterId;
     if (!targetSemesterId) {
       const active = await prisma.semester.findFirst({
-        where: { purged: false },
+        where: { userId: user.id, purged: false },
         orderBy: { createdAt: "desc" },
       });
       if (!active) {
         return NextResponse.json(
-          { error: "No active semester found. Please create a semester first." },
+          { error: "No active semester found for user. Please create a semester first." },
           { status: 400 }
         );
       }
       targetSemesterId = active.id;
+    } else {
+      const ownership = await verifySemesterOwnership(targetSemesterId, user.id);
+      if (!ownership.authorized) return ownership.errorResponse;
     }
 
-    // Process courses
+    // Process courses for this user's semester
     const courseMap = new Map<string, any>();
     const existingCourses = await prisma.course.findMany({
-      where: { semesterId: targetSemesterId },
+      where: { semesterId: targetSemesterId, semester: { userId: user.id } },
       include: {
         slots: {
           include: {
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
       let course = courseMap.get(courseCode);
 
       if (!course) {
-        // Create new course
+        // Create new course in user's semester
         course = await prisma.course.create({
           data: {
             semesterId: targetSemesterId,

@@ -8,8 +8,21 @@ generator client {
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  semesters    Semester[]
+
+  @@map("users")
+}
+
 model Semester {
   id                 String          @id @default(uuid())
+  userId             String          @map("user_id")
   name               String          // e.g. "Fall 2026"
   startDate          DateTime        @map("start_date")
   endDate            DateTime        @map("end_date")
@@ -20,6 +33,7 @@ model Semester {
   createdAt          DateTime        @default(now()) @map("created_at")
   updatedAt          DateTime        @updatedAt @map("updated_at")
 
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   courses            Course[]
   geofence           CampusGeofence?
   holidays           Holiday[]

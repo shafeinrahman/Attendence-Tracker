@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySemesterOwnership } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { searchParams } = new URL(req.url);
     const semesterId = searchParams.get("semesterId");
 
+    if (semesterId) {
+      const ownership = await verifySemesterOwnership(semesterId, user.id);
+      if (!ownership.authorized) return ownership.errorResponse;
+    }
+
     const holidays = await prisma.holiday.findMany({
-      where: semesterId ? { semesterId } : { semester: { purged: false } },
+      where: semesterId
+        ? { semesterId, semester: { userId: user.id } }
+        : { semester: { userId: user.id, purged: false } },
       orderBy: { date: "asc" },
     });
 
@@ -22,8 +30,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -38,13 +47,16 @@ export async function POST(req: NextRequest) {
     let targetSemesterId = semesterId;
     if (!targetSemesterId) {
       const active = await prisma.semester.findFirst({
-        where: { purged: false },
+        where: { userId: user.id, purged: false },
         orderBy: { createdAt: "desc" },
       });
       if (!active) {
         return NextResponse.json({ error: "No active semester found" }, { status: 400 });
       }
       targetSemesterId = active.id;
+    } else {
+      const ownership = await verifySemesterOwnership(targetSemesterId, user.id);
+      if (!ownership.authorized) return ownership.errorResponse;
     }
 
     const holiday = await prisma.holiday.upsert({
@@ -71,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     const slots = await prisma.classSlot.findMany({
       where: {
-        course: { semesterId: targetSemesterId },
+        course: { semesterId: targetSemesterId, semester: { userId: user.id } },
         OR: [
           { specificDate: holidayDate },
           { recurring: true, dayOfWeek: isoDay },
@@ -114,8 +126,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -123,6 +136,22 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "Holiday id is required" }, { status: 400 });
+    }
+
+    const existing = await prisma.holiday.findUnique({
+      where: { id },
+      include: { semester: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Holiday not found" }, { status: 404 });
+    }
+
+    if (existing.semester.userId !== user.id) {
+      return NextResponse.json(
+        { error: "Forbidden: You do not have access to this holiday" },
+        { status: 403 }
+      );
     }
 
     await prisma.holiday.delete({

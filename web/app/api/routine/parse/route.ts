@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { parseMarkdownRoutine, ParsedSlot } from "@/lib/parser/markdown-parser";
 import { parsePdfRoutine } from "@/lib/parser/pdf-parser";
 import { parseImageRoutine } from "@/lib/parser/ocr-parser";
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
 
   try {
     const contentType = req.headers.get("content-type") || "";

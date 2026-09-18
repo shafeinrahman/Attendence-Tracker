@@ -1,13 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Download,
   AlertTriangle,
-  Key,
-  ShieldCheck,
   GraduationCap,
+  LogOut,
+  User,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -17,18 +18,36 @@ interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onExport: (format: "json" | "csv") => void;
+  userEmail?: string | null;
 }
 
 export function Navbar({
   activeSemester,
-  apiToken,
-  onUpdateToken,
   activeTab,
   setActiveTab,
   onExport,
+  userEmail,
 }: NavbarProps) {
-  const [showTokenInput, setShowTokenInput] = React.useState(false);
-  const [tempToken, setTempToken] = React.useState(apiToken);
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(userEmail || null);
+
+  useEffect(() => {
+    if (!email && typeof window !== "undefined") {
+      const stored = localStorage.getItem("attendance_user_email");
+      if (stored) setEmail(stored);
+    }
+  }, [email]);
+
+  const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("attendance_api_token");
+      localStorage.removeItem("attendance_user_email");
+    }
+    // Clear cookies
+    document.cookie = "attendance_jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    document.cookie = "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+    router.push("/login");
+  };
 
   // Compute days until purge if active semester exists
   let daysUntilPurge: number | null = null;
@@ -59,7 +78,7 @@ export function Navbar({
               <span className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
                 Attendance Tracker
                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium border border-indigo-500/30">
-                  Companion
+                  Multi-User
                 </span>
               </span>
               {activeSemester && (
@@ -111,43 +130,24 @@ export function Navbar({
               </div>
             </div>
 
-            {/* Token config button */}
-            <button
-              onClick={() => setShowTokenInput(!showTokenInput)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition"
-              title="Configure API Token"
-            >
-              <Key className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">API Token</span>
-            </button>
+            {/* User Account badge & Logout */}
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+                <User className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="max-w-[150px] truncate">{email || "Account"}</span>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-medium border border-rose-500/30 transition"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
-
-        {/* Token input drawer */}
-        {showTokenInput && (
-          <div className="py-2.5 px-4 my-2 rounded-lg bg-slate-800/90 border border-slate-700 flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 flex-1">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="text-slate-300">Set API Token / PIN:</span>
-              <input
-                type="password"
-                value={tempToken}
-                onChange={(e) => setTempToken(e.target.value)}
-                placeholder="Enter API token..."
-                className="bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none focus:border-indigo-500 flex-1 max-w-sm"
-              />
-            </div>
-            <button
-              onClick={() => {
-                onUpdateToken(tempToken);
-                setShowTokenInput(false);
-              }}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium transition"
-            >
-              Save Token
-            </button>
-          </div>
-        )}
 
         {/* Navigation Tabs */}
         <nav className="flex space-x-1 overflow-x-auto pb-1 scrollbar-none">

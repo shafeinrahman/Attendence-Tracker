@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySlotOwnership, verifySemesterOwnership } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -12,8 +13,15 @@ export async function GET(req: NextRequest) {
     const courseId = searchParams.get("courseId");
     const semesterId = searchParams.get("semesterId");
 
+    if (semesterId) {
+      const ownership = await verifySemesterOwnership(semesterId, user.id);
+      if (!ownership.authorized) return ownership.errorResponse;
+    }
+
     const activeSemester = await prisma.semester.findFirst({
-      where: semesterId ? { id: semesterId } : { purged: false },
+      where: semesterId
+        ? { id: semesterId, userId: user.id }
+        : { userId: user.id, purged: false },
       include: {
         courses: {
           include: {
@@ -29,7 +37,6 @@ export async function GET(req: NextRequest) {
     }
 
     const allSlots = activeSemester.courses.flatMap((c) => c.slots);
-    const slotMap = new Map(allSlots.map((s) => [s.id, s]));
 
     // If a specific date is requested, perform lazy absent defaulting for any passed slots on that date
     if (dateStr) {
@@ -105,9 +112,14 @@ export async function GET(req: NextRequest) {
       whereClause.date = new Date(dateStr + "T00:00:00Z");
     }
     if (courseId) {
-      whereClause.classSlot = { courseId };
+      whereClause.classSlot = {
+        courseId,
+        course: { semester: { userId: user.id } },
+      };
     } else {
-      whereClause.classSlot = { course: { semesterId: activeSemester.id } };
+      whereClause.classSlot = {
+        course: { semesterId: activeSemester.id, semester: { userId: user.id } },
+      };
     }
 
     const records = await prisma.attendanceRecord.findMany({
@@ -130,8 +142,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -149,14 +162,14 @@ export async function POST(req: NextRequest) {
 
     const targetDate = new Date(date + "T00:00:00Z");
 
-    // Fetch active semester to compute first-week and midterm-week flags
+    // Fetch active semester for this user
     const activeSemester = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: { userId: user.id, purged: false },
       orderBy: { createdAt: "desc" },
     });
 
     if (!activeSemester) {
-      return NextResponse.json({ error: "No active semester found" }, { status: 400 });
+      return NextResponse.json({ error: "No active semester found for user" }, { status: 400 });
     }
 
     const semStart = new Date(activeSemester.startDate);
@@ -174,13 +187,13 @@ export async function POST(req: NextRequest) {
 
     // Handle "Skip Today" (Bulk Skip) (§4.11)
     if (isBulkSkip && !classSlotId) {
-      // Find all class slots that occur on this date
+      // Find all class slots that occur on this date for the user's active semester
       const jsDay = targetDate.getDay();
       const isoDay = jsDay === 0 ? 7 : jsDay;
 
       const daySlots = await prisma.classSlot.findMany({
         where: {
-          course: { semesterId: activeSemester.id },
+          course: { semesterId: activeSemester.id, semester: { userId: user.id } },
           OR: [
             { specificDate: targetDate },
             { recurring: true, dayOfWeek: isoDay },
@@ -230,6 +243,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Verify slot belongs to the authenticated user
+    const slotOwnership = await verifySlotOwnership(classSlotId, user.id);
+    if (!slotOwnership.authorized) {
+      return slotOwnership.errorResponse;
+    }
+
     const record = await prisma.attendanceRecord.upsert({
       where: {
         classSlotId_date: {
@@ -266,8 +285,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -275,6 +295,33 @@ export async function PATCH(req: NextRequest) {
 
     if (!id || !status) {
       return NextResponse.json({ error: "id and status are required" }, { status: 400 });
+    }
+
+    // Verify record ownership
+    const existing = await prisma.attendanceRecord.findUnique({
+      where: { id },
+      include: {
+        classSlot: {
+          include: {
+            course: {
+              include: {
+                semester: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
+    }
+
+    if (existing.classSlot.course.semester.userId !== user.id) {
+      return NextResponse.json(
+        { error: "Forbidden: You do not have access to this record" },
+        { status: 403 }
+      );
     }
 
     const record = await prisma.attendanceRecord.update({

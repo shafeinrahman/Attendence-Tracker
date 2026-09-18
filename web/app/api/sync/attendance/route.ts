@@ -1,27 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
-    const { records } = body; // Array of { classSlotId, date, status, source, loggedAt, isBulkSkip }
+    const { records } = body; // Array of { classSlotId, date, status, source, loggedAt, isBulkSkip, localSyncId }
 
     if (!Array.isArray(records) || records.length === 0) {
       return NextResponse.json({ error: "records must be a non-empty array" }, { status: 400 });
     }
 
     const activeSemester = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: { userId: user.id, purged: false },
       orderBy: { createdAt: "desc" },
     });
 
     if (!activeSemester) {
-      return NextResponse.json({ error: "No active semester found" }, { status: 400 });
+      return NextResponse.json({ error: "No active semester found for user" }, { status: 400 });
     }
+
+    // Pre-fetch all valid slots owned by this user to verify slot ownership
+    const userSlots = await prisma.classSlot.findMany({
+      where: {
+        course: {
+          semesterId: activeSemester.id,
+          semester: { userId: user.id },
+        },
+      },
+      select: { id: true },
+    });
+    const allowedSlotIds = new Set(userSlots.map((s) => s.id));
 
     const semStart = new Date(activeSemester.startDate);
     const firstWeekEnd = new Date(semStart.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -29,6 +42,11 @@ export async function POST(req: NextRequest) {
     const processedIds: string[] = [];
 
     for (const item of records) {
+      // Reject any slot not belonging to the caller
+      if (!allowedSlotIds.has(item.classSlotId)) {
+        continue;
+      }
+
       const targetDate = new Date(item.date.slice(0, 10) + "T00:00:00Z");
       const isFirstWeek = targetDate >= semStart && targetDate < firstWeekEnd;
 

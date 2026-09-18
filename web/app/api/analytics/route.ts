@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySemesterOwnership } from "@/lib/auth";
 import { calculateCourseStats, CourseAttendanceStats } from "@/lib/attendance-calculator";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
+    const { searchParams } = new URL(req.url);
+    const semesterId = searchParams.get("semesterId");
+
+    if (semesterId) {
+      const ownership = await verifySemesterOwnership(semesterId, user.id);
+      if (!ownership.authorized) return ownership.errorResponse;
+    }
+
     const activeSemester = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: semesterId
+        ? { id: semesterId, userId: user.id }
+        : { userId: user.id, purged: false },
       include: {
         courses: {
           include: {
@@ -34,7 +45,6 @@ export async function GET(req: NextRequest) {
     }
 
     const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10);
     const semesterEnd = new Date(activeSemester.endDate);
 
     const holidayDateSet = new Set(
@@ -52,7 +62,6 @@ export async function GET(req: NextRequest) {
       // Calculate remaining slots until semester end
       let remainingSlotsCount = 0;
       if (today < semesterEnd) {
-        // Iterate days from tomorrow (or today's remaining) to semester end
         let cur = new Date(today);
         cur.setDate(cur.getDate() + 1);
 

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const activeSemester = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: { userId: user.id, purged: false },
       include: {
         geofence: true,
         holidays: true,
@@ -33,13 +34,18 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Recent records (e.g. past 14 days and today)
+    // Recent records (e.g. past 14 days and today) for user's semester
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
     const recentRecords = await prisma.attendanceRecord.findMany({
       where: {
-        classSlot: { course: { semesterId: activeSemester.id } },
+        classSlot: {
+          course: {
+            semesterId: activeSemester.id,
+            semester: { userId: user.id },
+          },
+        },
         date: { gte: twoWeeksAgo },
       },
       include: {

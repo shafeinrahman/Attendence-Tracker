@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { TodayClassesView } from "@/components/TodayClassesView";
 import { AnalyticsView } from "@/components/AnalyticsView";
@@ -8,9 +9,12 @@ import { RoutineUploader } from "@/components/RoutineUploader";
 import { SemesterConfigView } from "@/components/SemesterConfigView";
 import { OnlineMakeupModal } from "@/components/OnlineMakeupModal";
 import { CourseAttendanceStats } from "@/lib/attendance-calculator";
+import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [apiToken, setApiToken] = useState<string>("attendance-secret-token-12345");
+  const router = useRouter();
+  const [apiToken, setApiToken] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("today");
 
   const [activeSemester, setActiveSemester] = useState<any>(null);
@@ -26,14 +30,35 @@ export default function DashboardPage() {
 
   const [rescheduleSlot, setRescheduleSlot] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
 
-  // Load token from localStorage on client mount
+  // Check auth session / token on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedToken = localStorage.getItem("attendance_api_token");
-      if (savedToken) setApiToken(savedToken);
+      const savedEmail = localStorage.getItem("attendance_user_email");
+
+      if (!savedToken) {
+        // Attempt to check if cookie session exists via /api/auth/me
+        fetch("/api/auth/me")
+          .then((res) => {
+            if (res.ok) return res.json();
+            throw new Error("Unauthenticated");
+          })
+          .then((data) => {
+            setUserEmail(data.user.email);
+            setCheckingAuth(false);
+          })
+          .catch(() => {
+            router.push("/login");
+          });
+      } else {
+        setApiToken(savedToken);
+        setUserEmail(savedEmail);
+        setCheckingAuth(false);
+      }
     }
-  }, []);
+  }, [router]);
 
   const handleUpdateToken = (token: string) => {
     setApiToken(token);
@@ -43,20 +68,29 @@ export default function DashboardPage() {
   };
 
   const getHeaders = useCallback(() => {
-    return {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiToken}`,
     };
+    if (apiToken) {
+      headers["Authorization"] = `Bearer ${apiToken}`;
+    }
+    return headers;
   }, [apiToken]);
 
   // Fetch all dashboard data
   const fetchData = useCallback(async () => {
+    if (checkingAuth) return;
     setLoading(true);
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
 
       // 1. Fetch active semester
       const semRes = await fetch("/api/semesters", { headers: getHeaders() });
+      if (semRes.status === 401) {
+        router.push("/login");
+        return;
+      }
+
       if (semRes.ok) {
         const semData = await semRes.json();
         setActiveSemester(semData.semester);
@@ -68,6 +102,8 @@ export default function DashboardPage() {
             (h: any) => new Date(h.date).toISOString().slice(0, 10) === todayStr
           );
           setTodayHoliday(foundHoliday || null);
+        } else {
+          setTodayHoliday(null);
         }
       }
 
@@ -108,11 +144,13 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [getHeaders]);
+  }, [checkingAuth, getHeaders, router]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!checkingAuth) {
+      fetchData();
+    }
+  }, [checkingAuth, fetchData]);
 
   // Handler: Log attendance for a slot
   const handleLogAttendance = async (slotId: string, status: string) => {
@@ -269,6 +307,17 @@ export default function DashboardPage() {
     await fetchData();
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+          <span>Authenticating session...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <Navbar
@@ -278,6 +327,7 @@ export default function DashboardPage() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onExport={handleExport}
+        userEmail={userEmail}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">

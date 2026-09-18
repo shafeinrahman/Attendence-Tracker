@@ -6,6 +6,19 @@ import retrofit2.http.*
 
 interface ApiService {
 
+    @POST("api/auth/login")
+    suspend fun login(
+        @Body request: LoginRequest
+    ): Response<AuthResponse>
+
+    @POST("api/auth/signup")
+    suspend fun signup(
+        @Body request: SignupRequest
+    ): Response<AuthResponse>
+
+    @GET("api/auth/me")
+    suspend fun getMe(): Response<MeResponse>
+
     @GET("api/sync")
     suspend fun getSyncData(): Response<SyncResponse>
 
@@ -132,3 +145,29 @@ data class ExcuseRequest(
     val id: String,
     val status: String
 )
+
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+data class SignupRequest(
+    val email: String,
+    val password: String
+)
+
+data class UserDto(
+    val id: String,
+    val email: String
+)
+
+data class AuthResponse(
+    val message: String?,
+    val token: String,
+    val user: UserDto
+)
+
+data class MeResponse(
+    val user: UserDto
+)
+

@@ -18,11 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.attendance.tracker.data.local.ClassSlotEntity
-import com.attendance.tracker.data.local.CourseEntity
 import com.attendance.tracker.data.repository.AttendanceRepository
 import com.attendance.tracker.data.repository.PreferencesManager
 import com.attendance.tracker.ui.screens.CoursesScreen
 import com.attendance.tracker.ui.screens.HomeScreen
+import com.attendance.tracker.ui.screens.LoginScreen
 import com.attendance.tracker.ui.screens.SettingsScreen
 import com.attendance.tracker.ui.theme.AttendanceTrackerTheme
 import com.attendance.tracker.ui.theme.Slate900
@@ -48,9 +48,11 @@ class MainActivity : ComponentActivity() {
 
         requestRequiredPermissions()
 
-        // Trigger background sync
-        lifecycleScope.launch {
-            repository.sync()
+        // Trigger background sync only if logged in
+        if (prefs.isLoggedIn) {
+            lifecycleScope.launch {
+                repository.sync()
+            }
         }
 
         setContent {
@@ -82,6 +84,21 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun MainAppContent() {
+        var isLoggedIn by remember { mutableStateOf(prefs.isLoggedIn) }
+
+        if (!isLoggedIn) {
+            LoginScreen(
+                prefs = prefs,
+                onLoginSuccess = {
+                    isLoggedIn = true
+                    lifecycleScope.launch {
+                        repository.sync()
+                    }
+                }
+            )
+            return
+        }
+
         var selectedTab by remember { mutableStateOf(0) }
         val isInsideCampus by remember { mutableStateOf(prefs.isInsideCampus) }
         var todaySlotsWithStatus by remember { mutableStateOf<List<Pair<ClassSlotEntity, String?>>>(emptyList()) }
@@ -109,8 +126,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        LaunchedEffect(Unit) {
-            refreshTodayData()
+        LaunchedEffect(isLoggedIn) {
+            if (isLoggedIn) {
+                refreshTodayData()
+            }
         }
 
         Scaffold(
@@ -163,6 +182,7 @@ class MainActivity : ComponentActivity() {
                     2 -> SettingsScreen(
                         currentBaseUrl = prefs.apiBaseUrl,
                         currentToken = prefs.apiToken,
+                        userEmail = prefs.userEmail,
                         isSyncing = isSyncing,
                         onSaveSettings = { url, token ->
                             prefs.apiBaseUrl = url
@@ -175,6 +195,10 @@ class MainActivity : ComponentActivity() {
                                 refreshTodayData()
                                 isSyncing = false
                             }
+                        },
+                        onLogout = {
+                            prefs.logout()
+                            isLoggedIn = false
                         }
                     )
                 }

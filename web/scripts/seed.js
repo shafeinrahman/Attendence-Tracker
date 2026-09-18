@@ -13,12 +13,27 @@ async function main() {
   await prisma.campusGeofence.deleteMany();
   await prisma.semester.deleteMany();
 
+  const bcrypt = require("bcryptjs");
+  const testEmail = "demo@attendance.local";
+  let user = await prisma.user.findUnique({ where: { email: testEmail } });
+  if (!user) {
+    const passwordHash = await bcrypt.hash("Password123!", 10);
+    user = await prisma.user.create({
+      data: {
+        email: testEmail,
+        passwordHash,
+      },
+    });
+    console.log(`Created seed user: ${user.email} (${user.id})`);
+  }
+
   const startDate = new Date("2026-09-01T00:00:00Z");
   const endDate = new Date("2026-12-20T00:00:00Z");
   const purgeAt = new Date(endDate.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const semester = await prisma.semester.create({
     data: {
+      userId: user.id,
       name: "Fall 2026",
       startDate,
       endDate,

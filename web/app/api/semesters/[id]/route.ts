@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth, verifySemesterOwnership } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { id } = await params;
+    const ownership = await verifySemesterOwnership(id, user.id);
+    if (!ownership.authorized) {
+      return ownership.errorResponse;
+    }
+
     const semester = await prisma.semester.findUnique({
       where: { id },
       include: {
@@ -24,10 +30,6 @@ export async function GET(
       },
     });
 
-    if (!semester) {
-      return NextResponse.json({ error: "Semester not found" }, { status: 404 });
-    }
-
     return NextResponse.json({ semester });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -38,11 +40,17 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { id } = await params;
+    const ownership = await verifySemesterOwnership(id, user.id);
+    if (!ownership.authorized) {
+      return ownership.errorResponse;
+    }
+
     const existing = await prisma.semester.findUnique({
       where: { id },
       include: {
@@ -195,11 +203,17 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const { id } = await params;
+    const ownership = await verifySemesterOwnership(id, user.id);
+    if (!ownership.authorized) {
+      return ownership.errorResponse;
+    }
+
     await prisma.semester.delete({
       where: { id },
     });

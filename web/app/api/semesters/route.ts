@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticateRequest } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const activeSemester = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: { userId: user.id, purged: false },
       include: {
         courses: {
           include: {
@@ -29,8 +30,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = authenticateRequest(req);
-  if (!auth.authenticated) return auth.errorResponse!;
+  const auth = await requireAuth(req);
+  if (auth.errorResponse) return auth.errorResponse;
+  const user = auth.user;
 
   try {
     const body = await req.json();
@@ -47,20 +49,21 @@ export async function POST(req: NextRequest) {
     const end = new Date(endDate);
     const purgeAt = new Date(end.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Only one active semester at a time: check if an active semester exists
+    // Only one active semester at a time PER USER
     const existingActive = await prisma.semester.findFirst({
-      where: { purged: false },
+      where: { userId: user.id, purged: false },
     });
 
     if (existingActive) {
       return NextResponse.json(
-        { error: "An active semester already exists. Complete, purge, or archive it before creating a new one." },
+        { error: "An active semester already exists for your account. Complete, purge, or archive it before creating a new one." },
         { status: 400 }
       );
     }
 
     const semester = await prisma.semester.create({
       data: {
+        userId: user.id,
         name,
         startDate: start,
         endDate: end,
