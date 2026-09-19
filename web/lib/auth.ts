@@ -11,12 +11,19 @@ export function getJwtSecret(): Uint8Array {
   return new TextEncoder().encode(JWT_SECRET_STRING);
 }
 
+export type AuthUser = {
+  id: string;
+  studentId: string;
+  email?: string;
+};
+
 export async function signJwtToken(
-  payload: { id: string; email: string },
+  payload: { id: string; studentId?: string; email?: string },
   expiresIn = "30d"
 ): Promise<string> {
   const secret = getJwtSecret();
-  return new SignJWT({ id: payload.id, email: payload.email })
+  const idValue = payload.studentId || payload.email || "";
+  return new SignJWT({ id: payload.id, studentId: idValue, email: idValue })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expiresIn)
@@ -25,14 +32,16 @@ export async function signJwtToken(
 
 export async function verifyJwtToken(
   token: string
-): Promise<{ id: string; email: string } | null> {
+): Promise<AuthUser | null> {
   try {
     const secret = getJwtSecret();
     const { payload } = await jwtVerify(token, secret);
-    if (payload && payload.id && payload.email) {
+    if (payload && payload.id && (payload.studentId || payload.email)) {
+      const studentId = (payload.studentId || payload.email) as string;
       return {
         id: payload.id as string,
-        email: payload.email as string,
+        studentId,
+        email: studentId,
       };
     }
     return null;
@@ -69,7 +78,7 @@ export function extractTokenFromRequest(req: NextRequest): string | null {
 
 export async function getAuthenticatedUser(
   req: NextRequest
-): Promise<{ id: string; email: string } | null> {
+): Promise<AuthUser | null> {
   // 1. Check Bearer or JWT header/cookie first (Mobile & API clients)
   const token = extractTokenFromRequest(req);
   if (token) {
@@ -83,10 +92,12 @@ export async function getAuthenticatedUser(
   try {
     const { auth } = await import("../auth");
     const session = await auth();
-    if (session?.user?.id && session.user.email) {
+    const studentId = (session?.user as any)?.studentId || session?.user?.email;
+    if (session?.user?.id && studentId) {
       return {
         id: session.user.id,
-        email: session.user.email,
+        studentId,
+        email: studentId,
       };
     }
   } catch {
@@ -99,7 +110,7 @@ export async function getAuthenticatedUser(
 export async function requireAuth(
   req: NextRequest
 ): Promise<
-  | { user: { id: string; email: string }; errorResponse?: undefined }
+  | { user: AuthUser; errorResponse?: undefined }
   | { user?: undefined; errorResponse: NextResponse }
 > {
   const user = await getAuthenticatedUser(req);

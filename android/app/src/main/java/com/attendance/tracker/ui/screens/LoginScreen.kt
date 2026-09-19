@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +36,7 @@ fun LoginScreen(
 ) {
     var isRegisterMode by remember { mutableStateOf(false) }
     var serverUrl by remember { mutableStateOf(prefs.apiBaseUrl) }
-    var email by remember { mutableStateOf(prefs.userEmail) }
+    var studentId by remember { mutableStateOf(prefs.studentId) }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var showServerConfig by remember { mutableStateOf(false) }
@@ -96,14 +96,14 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     OutlinedTextField(
-                        value = email,
+                        value = studentId,
                         onValueChange = {
-                            email = it
+                            studentId = it
                             errorMessage = null
                         },
-                        label = { Text("Email Address") },
-                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Slate400) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        label = { Text("Student ID") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Slate400) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -158,8 +158,8 @@ fun LoginScreen(
 
                     Button(
                         onClick = {
-                            if (email.isBlank() || password.isBlank()) {
-                                errorMessage = "Please enter both email and password"
+                            if (studentId.isBlank() || password.isBlank()) {
+                                errorMessage = "Please enter both Student ID and password"
                                 return@Button
                             }
 
@@ -183,9 +183,9 @@ fun LoginScreen(
                                 try {
                                     val api = ApiClient.create(prefs.apiBaseUrl)
                                     val response = if (isRegisterMode) {
-                                        api.signup(SignupRequest(email.trim(), password))
+                                        api.signup(SignupRequest(studentId.trim(), password))
                                     } else {
-                                        api.login(LoginRequest(email.trim(), password))
+                                        api.login(LoginRequest(studentId.trim(), password))
                                     }
 
                                     withContext(Dispatchers.Main) {
@@ -193,7 +193,7 @@ fun LoginScreen(
                                         if (response.isSuccessful && response.body() != null) {
                                             val body = response.body()!!
                                             prefs.apiToken = body.token
-                                            prefs.userEmail = body.user.email
+                                            prefs.studentId = body.user.studentId
                                             onLoginSuccess()
                                         } else {
                                             errorMessage = response.errorBody()?.string()?.let {

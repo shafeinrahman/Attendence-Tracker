@@ -182,7 +182,7 @@ class MainActivity : ComponentActivity() {
                     2 -> SettingsScreen(
                         currentBaseUrl = prefs.apiBaseUrl,
                         currentToken = prefs.apiToken,
-                        userEmail = prefs.userEmail,
+                        studentId = prefs.studentId,
                         isSyncing = isSyncing,
                         onSaveSettings = { url, token ->
                             prefs.apiBaseUrl = url

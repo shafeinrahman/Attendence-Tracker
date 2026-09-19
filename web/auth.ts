@@ -8,18 +8,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        studentId: { label: "Student ID", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        const studentIdRaw = credentials?.studentId ?? (credentials as any)?.email;
+        if (!studentIdRaw || !credentials?.password) {
           return null;
         }
-        const email = String(credentials.email).toLowerCase().trim();
+        const studentId = String(studentIdRaw).trim();
         const password = String(credentials.password);
 
         const user = await prisma.user.findUnique({
-          where: { email },
+          where: { studentId },
         });
 
         if (!user || !user.passwordHash) {
@@ -33,8 +34,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return {
           id: user.id,
-          email: user.email,
-        };
+          studentId: user.studentId,
+          email: user.studentId, // Keep for NextAuth default type compatibility
+        } as any;
       },
     }),
   ],
@@ -45,14 +47,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.email = user.email;
+        token.studentId = (user as any).studentId || user.email;
+        token.email = (user as any).studentId || user.email;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token) {
         session.user.id = token.id as string;
-        session.user.email = token.email as string;
+        (session.user as any).studentId = token.studentId as string;
+        session.user.email = (token.studentId as string) || (token.email as string);
       }
       return session;
     },

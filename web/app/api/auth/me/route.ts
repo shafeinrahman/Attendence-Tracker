@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     where: { id: auth.user.id },
     select: {
       id: true,
-      email: true,
+      studentId: true,
       createdAt: true,
     },
   });

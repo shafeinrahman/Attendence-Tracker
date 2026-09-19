@@ -22,7 +22,8 @@ import com.attendance.tracker.ui.theme.*
 fun SettingsScreen(
     currentBaseUrl: String,
     currentToken: String,
-    userEmail: String,
+    userEmail: String = "",
+    studentId: String = userEmail,
     isSyncing: Boolean,
     onSaveSettings: (baseUrl: String, token: String) -> Unit,
     onManualSync: () -> Unit,
@@ -115,7 +116,7 @@ fun SettingsScreen(
                     }
 
                     Text(
-                        text = if (userEmail.isNotBlank()) userEmail else "Signed In",
+                        text = if (studentId.isNotBlank()) "Student ID: $studentId" else if (userEmail.isNotBlank()) "Student ID: $userEmail" else "Signed In",
                         color = Slate300,
                         fontSize = 14.sp
                     )

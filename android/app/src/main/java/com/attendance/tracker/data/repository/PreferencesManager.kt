@@ -35,9 +35,22 @@ class PreferencesManager(context: Context) {
         get() = sharedPreferences.getString(KEY_API_TOKEN, "") ?: ""
         set(value) = sharedPreferences.edit().putString(KEY_API_TOKEN, value.trim()).apply()
 
+    var studentId: String
+        get() {
+            val sid = sharedPreferences.getString(KEY_STUDENT_ID, "") ?: ""
+            if (sid.isNotBlank()) return sid
+            return sharedPreferences.getString(KEY_USER_EMAIL, "") ?: ""
+        }
+        set(value) {
+            sharedPreferences.edit()
+                .putString(KEY_STUDENT_ID, value.trim())
+                .putString(KEY_USER_EMAIL, value.trim())
+                .apply()
+        }
+
     var userEmail: String
-        get() = sharedPreferences.getString(KEY_USER_EMAIL, "") ?: ""
-        set(value) = sharedPreferences.edit().putString(KEY_USER_EMAIL, value.trim()).apply()
+        get() = studentId
+        set(value) { studentId = value }
 
     val isLoggedIn: Boolean
         get() = apiToken.isNotBlank()
@@ -45,6 +58,7 @@ class PreferencesManager(context: Context) {
     fun logout() {
         sharedPreferences.edit()
             .remove(KEY_API_TOKEN)
+            .remove(KEY_STUDENT_ID)
             .remove(KEY_USER_EMAIL)
             .remove(KEY_INSIDE_CAMPUS)
             .remove(KEY_LAST_SYNC)
@@ -62,6 +76,7 @@ class PreferencesManager(context: Context) {
     companion object {
         private const val KEY_BASE_URL = "api_base_url"
         private const val KEY_API_TOKEN = "api_token"
+        private const val KEY_STUDENT_ID = "student_id"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_INSIDE_CAMPUS = "is_inside_campus"
         private const val KEY_LAST_SYNC = "last_sync_timestamp"

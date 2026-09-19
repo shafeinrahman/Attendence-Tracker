@@ -33,7 +33,7 @@ export function Navbar({
 
   useEffect(() => {
     if (!email && typeof window !== "undefined") {
-      const stored = localStorage.getItem("attendance_user_email");
+      const stored = localStorage.getItem("attendance_student_id") || localStorage.getItem("attendance_user_email");
       if (stored) setEmail(stored);
     }
   }, [email]);
@@ -41,6 +41,7 @@ export function Navbar({
   const handleLogout = async () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("attendance_api_token");
+      localStorage.removeItem("attendance_student_id");
       localStorage.removeItem("attendance_user_email");
     }
     // Clear cookies

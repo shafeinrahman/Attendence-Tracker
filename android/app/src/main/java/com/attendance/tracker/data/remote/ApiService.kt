@@ -147,18 +147,21 @@ data class ExcuseRequest(
 )
 
 data class LoginRequest(
-    val email: String,
+    @SerializedName("studentId")
+    val studentId: String,
     val password: String
 )
 
 data class SignupRequest(
-    val email: String,
+    @SerializedName("studentId")
+    val studentId: String,
     val password: String
 )
 
 data class UserDto(
     val id: String,
-    val email: String
+    @SerializedName(value = "studentId", alternate = ["username", "email"])
+    val studentId: String
 )
 
 data class AuthResponse(

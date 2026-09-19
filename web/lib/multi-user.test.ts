@@ -21,7 +21,7 @@ vi.mock("./prisma", () => ({
 describe("Multi-User Authentication & Isolation Tests", () => {
   describe("JWT Generation & Verification", () => {
     it("signs and verifies a valid JWT payload", async () => {
-      const payload = { id: "user-abc-123", email: "alice@test.com" };
+      const payload = { id: "user-abc-123", studentId: "202100123" };
       const token = await signJwtToken(payload);
 
       expect(token).toBeDefined();
@@ -30,11 +30,11 @@ describe("Multi-User Authentication & Isolation Tests", () => {
       const decoded = await verifyJwtToken(token);
       expect(decoded).not.toBeNull();
       expect(decoded?.id).toBe("user-abc-123");
-      expect(decoded?.email).toBe("alice@test.com");
+      expect(decoded?.studentId).toBe("202100123");
     });
 
     it("rejects an invalid or tampered JWT token", async () => {
-      const validToken = await signJwtToken({ id: "user-1", email: "bob@test.com" });
+      const validToken = await signJwtToken({ id: "user-1", studentId: "202100456" });
       const tamperedToken = validToken.slice(0, -5) + "abcde";
 
       const decoded = await verifyJwtToken(tamperedToken);

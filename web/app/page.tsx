@@ -36,7 +36,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedToken = localStorage.getItem("attendance_api_token");
-      const savedEmail = localStorage.getItem("attendance_user_email");
+      const savedId = localStorage.getItem("attendance_student_id") || localStorage.getItem("attendance_user_email");
 
       if (!savedToken) {
         // Attempt to check if cookie session exists via /api/auth/me
@@ -46,7 +46,7 @@ export default function DashboardPage() {
             throw new Error("Unauthenticated");
           })
           .then((data) => {
-            setUserEmail(data.user.email);
+            setUserEmail(data.user.studentId || data.user.email);
             setCheckingAuth(false);
           })
           .catch(() => {
@@ -54,7 +54,7 @@ export default function DashboardPage() {
           });
       } else {
         setApiToken(savedToken);
-        setUserEmail(savedEmail);
+        setUserEmail(savedId);
         setCheckingAuth(false);
       }
     }

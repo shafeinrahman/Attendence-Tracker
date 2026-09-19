@@ -14,17 +14,17 @@ async function main() {
   await prisma.semester.deleteMany();
 
   const bcrypt = require("bcryptjs");
-  const testEmail = "demo@attendance.local";
-  let user = await prisma.user.findUnique({ where: { email: testEmail } });
+  const testStudentId = "2024001";
+  let user = await prisma.user.findUnique({ where: { studentId: testStudentId } });
   if (!user) {
     const passwordHash = await bcrypt.hash("Password123!", 10);
     user = await prisma.user.create({
       data: {
-        email: testEmail,
+        studentId: testStudentId,
         passwordHash,
       },
     });
-    console.log(`Created seed user: ${user.email} (${user.id})`);
+    console.log(`Created seed user: ${user.studentId} (${user.id})`);
   }
 
   const startDate = new Date("2026-09-01T00:00:00Z");

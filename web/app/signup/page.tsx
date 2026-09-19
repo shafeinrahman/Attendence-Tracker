@@ -7,7 +7,7 @@ import { GraduationCap, UserPlus, AlertCircle, Loader2 } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ studentId, password }),
       });
 
       const data = await res.json();
@@ -44,7 +44,7 @@ export default function SignupPage() {
 
       if (data.token) {
         localStorage.setItem("attendance_api_token", data.token);
-        localStorage.setItem("attendance_user_email", data.user.email);
+        localStorage.setItem("attendance_student_id", data.user.studentId);
       }
 
       router.push("/");
@@ -90,21 +90,21 @@ export default function SignupPage() {
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label
-                htmlFor="email"
+                htmlFor="studentId"
                 className="block text-sm font-medium text-slate-300"
               >
-                Email address
+                Student ID
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="studentId"
+                  name="studentId"
+                  type="text"
+                  autoComplete="username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student@university.edu"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  placeholder="e.g. 202100123"
                   className="appearance-none block w-full px-3.5 py-2.5 border border-slate-700 rounded-xl bg-slate-800/80 placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition sm:text-sm"
                 />
               </div>

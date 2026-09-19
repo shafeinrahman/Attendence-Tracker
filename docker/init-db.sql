@@ -10,7 +10,7 @@ CREATE TYPE "AttendanceSource" AS ENUM ('phone', 'desktop', 'default');
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "users" (
     "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
+    "student_id" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_student_id_key" ON "users"("student_id");
 
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "semesters" (

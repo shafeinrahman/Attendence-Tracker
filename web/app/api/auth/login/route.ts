@@ -6,24 +6,25 @@ import { signJwtToken } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { password } = body;
+    const rawId = body.studentId ?? body.username ?? body.email;
 
-    if (!email || !password) {
+    if (!rawId || !password) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Student ID and password are required" },
         { status: 400 }
       );
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
+    const normalizedStudentId = String(rawId).trim();
 
     const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { studentId: normalizedStudentId },
     });
 
     if (!user || !user.passwordHash) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid Student ID or password" },
         { status: 401 }
       );
     }
@@ -31,12 +32,12 @@ export async function POST(req: NextRequest) {
     const isValid = await bcrypt.compare(String(password), user.passwordHash);
     if (!isValid) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: "Invalid Student ID or password" },
         { status: 401 }
       );
     }
 
-    const token = await signJwtToken({ id: user.id, email: user.email });
+    const token = await signJwtToken({ id: user.id, studentId: user.studentId });
 
     const response = NextResponse.json(
       {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
         token,
         user: {
           id: user.id,
-          email: user.email,
+          studentId: user.studentId,
         },
       },
       { status: 200 }

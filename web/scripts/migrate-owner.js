@@ -6,24 +6,24 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Starting owner migration...");
 
-  const ownerEmail = process.env.OWNER_EMAIL || "owner@attendance.local";
+  const ownerStudentId = process.env.OWNER_STUDENT_ID || process.env.OWNER_EMAIL || "owner001";
   const ownerPassword = process.env.OWNER_PASSWORD || "AdminPass123!";
 
   let owner = await prisma.user.findUnique({
-    where: { email: ownerEmail },
+    where: { studentId: ownerStudentId },
   });
 
   if (!owner) {
     const passwordHash = await bcrypt.hash(ownerPassword, 10);
     owner = await prisma.user.create({
       data: {
-        email: ownerEmail,
+        studentId: ownerStudentId,
         passwordHash,
       },
     });
-    console.log(`Created default owner account: ${owner.email} (${owner.id})`);
+    console.log(`Created default owner account: ${owner.studentId} (${owner.id})`);
   } else {
-    console.log(`Owner account already exists: ${owner.email} (${owner.id})`);
+    console.log(`Owner account already exists: ${owner.studentId} (${owner.id})`);
   }
 
   // Find semesters with raw query or prisma query

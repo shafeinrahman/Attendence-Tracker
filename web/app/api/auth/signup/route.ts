@@ -6,11 +6,12 @@ import { signJwtToken } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { password } = body;
+    const rawId = body.studentId ?? body.username ?? body.email;
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
+    if (!rawId || typeof rawId !== "string" || rawId.trim().length === 0) {
       return NextResponse.json(
-        { error: "A valid email address is required" },
+        { error: "A valid Student ID is required" },
         { status: 400 }
       );
     }
@@ -22,16 +23,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedStudentId = rawId.trim();
 
     // Check if user already exists
     const existing = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { studentId: normalizedStudentId },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "An account with this email already exists" },
+        { error: "An account with this Student ID already exists" },
         { status: 409 }
       );
     }
@@ -39,17 +40,17 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
-        email: normalizedEmail,
+        studentId: normalizedStudentId,
         passwordHash,
       },
       select: {
         id: true,
-        email: true,
+        studentId: true,
         createdAt: true,
       },
     });
 
-    const token = await signJwtToken({ id: user.id, email: user.email });
+    const token = await signJwtToken({ id: user.id, studentId: user.studentId });
 
     const response = NextResponse.json(
       {
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
         token,
         user: {
           id: user.id,
-          email: user.email,
+          studentId: user.studentId,
         },
       },
       { status: 201 }
