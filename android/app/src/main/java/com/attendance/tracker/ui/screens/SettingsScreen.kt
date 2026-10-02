@@ -158,7 +158,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = baseUrl,
                         onValueChange = { baseUrl = it },
-                        label = { Text("Server URL (e.g. http://10.0.2.2:3000/)") },
+                        label = { Text("Server URL (e.g. https://attendence-tracker-ruddy.vercel.app)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,

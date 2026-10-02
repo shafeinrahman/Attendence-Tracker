@@ -156,4 +156,25 @@ describe("Multi-User Authentication & Isolation Tests", () => {
       }
     });
   });
+
+  describe("Logout Route Cookie Clearance", () => {
+    it("clears attendance_jwt and session cookies on logout", async () => {
+      const { POST: logoutHandler } = await import("../app/api/auth/logout/route");
+      const req = new NextRequest("http://localhost:3000/api/auth/logout", {
+        method: "POST",
+      });
+
+      const response = await logoutHandler(req);
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+      expect(data.success).toBe(true);
+
+      const cookieHeader = response.headers.get("set-cookie");
+      expect(cookieHeader).toBeDefined();
+      expect(cookieHeader).toContain("attendance_jwt=");
+      expect(cookieHeader).toContain("Expires=Thu, 01 Jan 1970");
+    });
+  });
 });
+

@@ -53,9 +53,25 @@ export default function DashboardPage() {
             router.push("/login");
           });
       } else {
-        setApiToken(savedToken);
-        setUserEmail(savedId);
-        setCheckingAuth(false);
+        // Verify saved token validity with server
+        fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${savedToken}` },
+        })
+          .then((res) => {
+            if (res.ok) return res.json();
+            throw new Error("Invalid session");
+          })
+          .then((data) => {
+            setApiToken(savedToken);
+            setUserEmail(data.user?.studentId || savedId);
+            setCheckingAuth(false);
+          })
+          .catch(() => {
+            localStorage.removeItem("attendance_api_token");
+            localStorage.removeItem("attendance_student_id");
+            localStorage.removeItem("attendance_user_email");
+            router.push("/login");
+          });
       }
     }
   }, [router]);

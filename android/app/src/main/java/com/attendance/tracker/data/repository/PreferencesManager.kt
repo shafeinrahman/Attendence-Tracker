@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.attendance.tracker.data.remote.ApiClient
 
 class PreferencesManager(context: Context) {
 
@@ -25,9 +26,9 @@ class PreferencesManager(context: Context) {
     }
 
     var apiBaseUrl: String
-        get() = sharedPreferences.getString(KEY_BASE_URL, "http://10.0.2.2:3000/") ?: "http://10.0.2.2:3000/"
+        get() = sharedPreferences.getString(KEY_BASE_URL, "https://attendence-tracker-ruddy.vercel.app/") ?: "https://attendence-tracker-ruddy.vercel.app/"
         set(value) {
-            val normalized = if (value.endsWith("/")) value else "$value/"
+            val normalized = ApiClient.normalizeBaseUrl(value)
             sharedPreferences.edit().putString(KEY_BASE_URL, normalized).apply()
         }
 

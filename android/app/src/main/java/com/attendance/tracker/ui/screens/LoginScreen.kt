@@ -278,7 +278,7 @@ fun LoginScreen(
                         serverUrl = it
                         prefs.apiBaseUrl = it
                     },
-                    label = { Text("Server Base URL") },
+                    label = { Text("Server Base URL (e.g. https://attendence-tracker-ruddy.vercel.app)") },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()

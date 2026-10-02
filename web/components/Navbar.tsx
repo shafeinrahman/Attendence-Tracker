@@ -39,15 +39,23 @@ export function Navbar({
   }, [email]);
 
   const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout request failed:", e);
+    }
+
     if (typeof window !== "undefined") {
       localStorage.removeItem("attendance_api_token");
       localStorage.removeItem("attendance_student_id");
       localStorage.removeItem("attendance_user_email");
+      sessionStorage.clear();
+      document.cookie = "attendance_jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+      document.cookie = "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+      window.location.href = "/login";
+    } else {
+      router.push("/login");
     }
-    // Clear cookies
-    document.cookie = "attendance_jwt=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    document.cookie = "authjs.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-    router.push("/login");
   };
 
   // Compute days until purge if active semester exists

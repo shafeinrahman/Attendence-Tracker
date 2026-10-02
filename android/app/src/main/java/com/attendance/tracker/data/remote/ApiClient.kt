@@ -37,8 +37,8 @@ class ApiClient(private val context: Context? = null) {
             .readTimeout(15, TimeUnit.SECONDS)
             .build()
 
-        val baseUrl = customBaseUrl ?: prefs?.apiBaseUrl ?: "http://10.0.2.2:3000/"
-        val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+        val baseUrl = customBaseUrl ?: prefs?.apiBaseUrl ?: "https://attendence-tracker-ruddy.vercel.app/"
+        val normalizedUrl = normalizeBaseUrl(baseUrl)
 
         return Retrofit.Builder()
             .baseUrl(normalizedUrl)
@@ -49,8 +49,34 @@ class ApiClient(private val context: Context? = null) {
     }
 
     companion object {
+        fun normalizeBaseUrl(input: String): String {
+            var trimmed = input.trim()
+            if (trimmed.isEmpty()) {
+                return "https://attendence-tracker-ruddy.vercel.app/"
+            }
+
+            // If no scheme is provided, determine whether to use http (local) or https (remote)
+            if (!trimmed.startsWith("http://", ignoreCase = true) && !trimmed.startsWith("https://", ignoreCase = true)) {
+                val hostPart = trimmed.substringBefore("/").substringBefore(":")
+                val isLocal = hostPart == "10.0.2.2" || hostPart == "localhost" || hostPart == "127.0.0.1" || hostPart.startsWith("192.168.")
+                trimmed = if (isLocal) "http://$trimmed" else "https://$trimmed"
+            }
+
+            // If http:// was entered for a remote host (e.g. *.vercel.app), upgrade to https://
+            if (trimmed.startsWith("http://", ignoreCase = true)) {
+                val withoutScheme = trimmed.substring(7)
+                val hostPart = withoutScheme.substringBefore("/").substringBefore(":")
+                val isLocal = hostPart == "10.0.2.2" || hostPart == "localhost" || hostPart == "127.0.0.1" || hostPart.startsWith("192.168.")
+                if (!isLocal && hostPart.contains(".")) {
+                    trimmed = "https://$withoutScheme"
+                }
+            }
+
+            return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
+        }
+
         fun create(baseUrl: String): ApiService {
-            val normalizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+            val normalizedUrl = normalizeBaseUrl(baseUrl)
             val logging = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             }
