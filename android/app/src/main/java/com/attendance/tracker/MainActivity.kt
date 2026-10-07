@@ -62,6 +62,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (::prefs.isInitialized && prefs.isLoggedIn && ::repository.isInitialized) {
+            lifecycleScope.launch {
+                repository.sync()
+            }
+        }
+    }
+
     private fun requestRequiredPermissions() {
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -105,6 +114,7 @@ class MainActivity : ComponentActivity() {
         var isHoliday by remember { mutableStateOf(false) }
         var holidayLabel by remember { mutableStateOf<String?>(null) }
         var isSyncing by remember { mutableStateOf(false) }
+        var courseRooms by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
 
         val db = AttendanceApp.instance.database
         val courses by db.attendanceDao().getAllCoursesFlow().collectAsState(initial = emptyList())
@@ -123,6 +133,11 @@ class MainActivity : ComponentActivity() {
                 val hol = repository.getTodayHoliday()
                 isHoliday = hol != null
                 holidayLabel = hol?.label
+
+                val allSlots = db.attendanceDao().getAllSlots()
+                courseRooms = allSlots
+                    .groupBy({ it.courseId }, { it.roomCode })
+                    .mapValues { entry -> entry.value.distinct().filter { it.isNotBlank() } }
             }
         }
 
@@ -178,7 +193,16 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     )
-                    1 -> CoursesScreen(courses = courses)
+                    1 -> CoursesScreen(
+                        courses = courses,
+                        courseRooms = courseRooms,
+                        onDropCourse = { courseId ->
+                            lifecycleScope.launch {
+                                repository.dropCourse(courseId)
+                                refreshTodayData()
+                            }
+                        }
+                    )
                     2 -> SettingsScreen(
                         currentBaseUrl = prefs.apiBaseUrl,
                         currentToken = prefs.apiToken,

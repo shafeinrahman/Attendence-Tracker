@@ -323,6 +323,18 @@ export default function DashboardPage() {
     await fetchData();
   };
 
+  const handleDropCourse = async (courseId: string) => {
+    const res = await fetch(`/api/courses/${courseId}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to drop course");
+    }
+    await fetchData();
+  };
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
@@ -364,6 +376,7 @@ export default function DashboardPage() {
             overall={analyticsData.overall}
             onExcuseToggle={handleExcuseToggle}
             fetchCourseRecords={handleFetchCourseRecords}
+            onDropCourse={handleDropCourse}
             loading={loading}
           />
         )}
@@ -381,10 +394,12 @@ export default function DashboardPage() {
         {activeTab === "config" && (
           <SemesterConfigView
             activeSemester={activeSemester}
+            courses={analyticsData.courses}
             onUpdateSemester={handleUpdateSemester}
             onCreateSemester={handleCreateSemester}
             onAddHoliday={handleAddHoliday}
             onDeleteHoliday={handleDeleteHoliday}
+            onDropCourse={handleDropCourse}
             apiToken={apiToken}
           />
         )}

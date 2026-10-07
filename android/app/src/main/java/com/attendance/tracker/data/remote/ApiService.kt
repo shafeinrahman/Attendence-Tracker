@@ -36,6 +36,11 @@ interface ApiService {
     suspend fun patchAttendance(
         @Body request: ExcuseRequest
     ): Response<AttendanceLogResponse>
+
+    @DELETE("api/courses/{id}")
+    suspend fun deleteCourse(
+        @Path("id") courseId: String
+    ): Response<Unit>
 }
 
 data class SyncResponse(

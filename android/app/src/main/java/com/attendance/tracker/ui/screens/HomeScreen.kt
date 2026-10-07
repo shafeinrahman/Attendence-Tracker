@@ -195,7 +195,7 @@ fun ClassSlotCard(
                             color = Color.White
                         )
                         Text(
-                            text = if (slot.sessionMode == "online") "ONLINE" else slot.roomCode,
+                            text = if (slot.sessionMode == "online") "ONLINE" else "Room: ${slot.roomCode}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (slot.sessionMode == "online") Indigo400 else Color.LightGray,

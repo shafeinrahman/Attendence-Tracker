@@ -95,6 +95,8 @@ export async function GET(req: NextRequest) {
         remainingSlots: remainingSlotsCount,
       });
 
+      stats.roomCodes = Array.from(new Set(course.slots.map((s) => s.roomCode).filter(Boolean)));
+
       coursesStats.push(stats);
       totalAttended += stats.attended;
       totalHeld += stats.held;

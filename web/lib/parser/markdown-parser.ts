@@ -53,6 +53,9 @@ function parseTimeRange(text: string): { startTime: string; endTime: string } | 
   return { startTime: start, endTime: end };
 }
 
+// 6-character alphanumeric room code pattern (e.g. 09A-01C, AS1-15L)
+export const ROOM_CODE_REGEX = /\b([A-Za-z0-9]{3}-[A-Za-z0-9]{3})\b/i;
+
 function extractCourseAndRoom(cell: string): { courseCode: string; roomCode: string } | null {
   const clean = cell.replace(/<br\s*\/?>/gi, " ").trim();
   if (!clean || clean === "-" || clean === "N/A" || clean.toLowerCase() === "free") {
@@ -66,10 +69,21 @@ function extractCourseAndRoom(cell: string): { courseCode: string; roomCode: str
 
   const courseCode = courseMatch[1].replace(/\s+/g, "").toUpperCase();
 
-  // The rest of the cell is likely the room code. Strip surrounding brackets/parentheses and slashes, but keep hyphens in room code (e.g. L-201L)
-  const remaining = clean.replace(courseMatch[0], "").replace(/[()\[\]/\\,:]/g, " ").trim();
-  const roomTokens = remaining.split(/\s+/).filter(Boolean);
-  const roomCode = roomTokens.length > 0 ? roomTokens[0].toUpperCase() : "TBD";
+  // Strip out course code to search for the room code
+  const remaining = clean.replace(courseMatch[0], "").trim();
+
+  // 1. Check for 6-character alphanumeric room code (e.g. 09A-01C, AS1-15L)
+  const room6Match = remaining.match(ROOM_CODE_REGEX) || clean.match(ROOM_CODE_REGEX);
+  let roomCode: string;
+
+  if (room6Match) {
+    roomCode = room6Match[1].toUpperCase();
+  } else {
+    // 2. Fallback to general room token extraction (e.g. 402C, L-201L)
+    const sanitizedRemaining = remaining.replace(/[()\[\]/\\,:]/g, " ").trim();
+    const roomTokens = sanitizedRemaining.split(/\s+/).filter(Boolean);
+    roomCode = roomTokens.length > 0 ? roomTokens[0].toUpperCase() : "TBD";
+  }
 
   return { courseCode, roomCode };
 }

@@ -103,3 +103,18 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+tasks.register("exportApk") {
+    dependsOn("assembleDebug")
+    doLast {
+        val buildApk = file("build/outputs/apk/debug/app-debug.apk")
+        if (buildApk.exists()) {
+            val destRoot = file("../../AttendanceTracker.apk")
+            val destWeb = file("../../web/public/AttendanceTracker.apk")
+            buildApk.copyTo(destRoot, overwrite = true)
+            destWeb.parentFile.mkdirs()
+            buildApk.copyTo(destWeb, overwrite = true)
+            println("Exported APK to ${destRoot.absolutePath} and ${destWeb.absolutePath}")
+        }
+    }
+}

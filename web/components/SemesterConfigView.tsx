@@ -10,23 +10,28 @@ import {
   AlertTriangle,
   CheckCircle2,
   Save,
+  BookOpen,
 } from "lucide-react";
 
 interface SemesterConfigViewProps {
   activeSemester: any;
+  courses?: any[];
   onUpdateSemester: (data: any) => Promise<void>;
   onCreateSemester: (data: any) => Promise<void>;
   onAddHoliday: (data: { date: string; label: string }) => Promise<void>;
   onDeleteHoliday: (holidayId: string) => Promise<void>;
+  onDropCourse?: (courseId: string) => Promise<void>;
   apiToken: string;
 }
 
 export function SemesterConfigView({
   activeSemester,
+  courses,
   onUpdateSemester,
   onCreateSemester,
   onAddHoliday,
   onDeleteHoliday,
+  onDropCourse,
   apiToken,
 }: SemesterConfigViewProps) {
   // Semester form state
@@ -339,6 +344,67 @@ export function SemesterConfigView({
                 </button>
               </div>
             ))
+          )}
+        </div>
+      </div>
+
+      {/* Enrolled Courses & Drop Option */}
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-5">
+        <div>
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-indigo-400" />
+            <span>Enrolled Courses</span>
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Manage your enrolled courses. Dropping a course will remove its classes and attendance records.
+          </p>
+        </div>
+
+        <div className="divide-y divide-slate-800 border border-slate-800 rounded-xl overflow-hidden">
+          {!courses || courses.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-500">
+              No courses enrolled for this semester yet.
+            </div>
+          ) : (
+            courses.map((c: any) => {
+              const id = c.courseId || c.id;
+              const code = c.courseCode || c.code;
+              const name = c.courseName || c.name;
+              return (
+                <div
+                  key={id}
+                  className="p-3.5 flex items-center justify-between hover:bg-slate-800/30 transition text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-white tracking-wide">{code}</span>
+                    <span className="text-slate-400 truncate max-w-xs">{name}</span>
+                    {c.roomCodes && c.roomCodes.length > 0 && (
+                      <span className="font-mono text-indigo-300 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-indigo-400" />
+                        <span>Room: {c.roomCodes.join(", ")}</span>
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] uppercase border border-slate-700">
+                      {c.category} ({c.thresholdPct}%)
+                    </span>
+                  </div>
+                  {onDropCourse && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to drop course ${code}? This will remove all associated slots and attendance records.`)) {
+                          onDropCourse(id);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/30 transition"
+                      title="Drop Course"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Drop Course</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>

@@ -4,8 +4,6 @@ import React from "react";
 import {
   UploadCloud,
   FileText,
-  FileSpreadsheet,
-  Image as ImageIcon,
   CheckCircle2,
   AlertTriangle,
   Trash2,
@@ -171,10 +169,10 @@ export function RoutineUploader({ onCommitSuccess, apiToken }: RoutineUploaderPr
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <UploadCloud className="w-5 h-5 text-indigo-400" />
-            <span>Upload or Paste Class Routine</span>
+            <span>Markdown Routine Ingestion</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Supports Grid PDF, Markdown Table, or routine image/screenshot. Server-side OCR & classification runs automatically.
+            Ingest your class schedule via Markdown table format. Paste your routine table directly or upload a Markdown file (.md).
           </p>
         </div>
 
@@ -183,17 +181,15 @@ export function RoutineUploader({ onCommitSuccess, apiToken }: RoutineUploaderPr
           {/* File Upload Box */}
           <div className="border-2 border-dashed border-slate-700 hover:border-indigo-500/60 rounded-xl p-6 text-center bg-slate-950/50 flex flex-col items-center justify-center transition">
             <div className="flex items-center gap-3 text-slate-400 mb-3">
-              <FileSpreadsheet className="w-6 h-6 text-emerald-400" />
-              <FileText className="w-6 h-6 text-indigo-400" />
-              <ImageIcon className="w-6 h-6 text-sky-400" />
+              <FileText className="w-8 h-8 text-indigo-400" />
             </div>
             <label className="cursor-pointer">
               <span className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-600 transition inline-block">
-                Choose PDF, Image, or Markdown File
+                Choose Markdown File (.md, .txt)
               </span>
               <input
                 type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.md,.txt"
+                accept=".md,.txt"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -217,7 +213,7 @@ export function RoutineUploader({ onCommitSuccess, apiToken }: RoutineUploaderPr
                 setPastedMarkdown(e.target.value);
                 setFile(null);
               }}
-              placeholder={`| Time | Monday | Wednesday |\n|---|---|---|\n| 09:30 - 11:00 | CSE331 402C | CSE331 402C |`}
+              placeholder={`| Time | Monday | Wednesday |\n|---|---|---|\n| 08:00 - 09:20 | CSE331 09A-01C | CSE331 09A-01C |\n| 11:30 - 13:00 | - | CSE420 AS1-15L |`}
               className="w-full h-full min-h-[100px] bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
             />
           </div>

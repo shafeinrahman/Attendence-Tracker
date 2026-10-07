@@ -11,6 +11,8 @@ import {
   ChevronRight,
   Sparkles,
   BookOpen,
+  MapPin,
+  Trash2,
 } from "lucide-react";
 import { CourseAttendanceStats } from "@/lib/attendance-calculator";
 
@@ -23,6 +25,7 @@ interface AnalyticsViewProps {
   };
   onExcuseToggle: (recordId: string, currentStatus: string) => Promise<void>;
   fetchCourseRecords: (courseId: string) => Promise<any[]>;
+  onDropCourse?: (courseId: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -31,11 +34,33 @@ export function AnalyticsView({
   overall,
   onExcuseToggle,
   fetchCourseRecords,
+  onDropCourse,
   loading,
 }: AnalyticsViewProps) {
   const [selectedCourse, setSelectedCourse] = React.useState<CourseAttendanceStats | null>(null);
   const [courseRecords, setCourseRecords] = React.useState<any[]>([]);
   const [loadingRecords, setLoadingRecords] = React.useState(false);
+  const [droppingCourseId, setDroppingCourseId] = React.useState<string | null>(null);
+
+  const handleDropClick = async (course: CourseAttendanceStats) => {
+    if (!onDropCourse) return;
+    const confirmed = confirm(
+      `Are you sure you want to drop course ${course.courseCode} (${course.courseName})?\n\nThis will permanently delete all associated class slots and attendance records.`
+    );
+    if (!confirmed) return;
+
+    setDroppingCourseId(course.courseId);
+    try {
+      await onDropCourse(course.courseId);
+      if (selectedCourse?.courseId === course.courseId) {
+        setSelectedCourse(null);
+      }
+    } catch (err: any) {
+      alert(`Failed to drop course: ${err.message}`);
+    } finally {
+      setDroppingCourseId(null);
+    }
+  };
 
   const handleSelectCourse = async (course: CourseAttendanceStats) => {
     setSelectedCourse(course);
@@ -136,16 +161,37 @@ export function AnalyticsView({
                     <div>
                       <span className="text-base font-bold text-white">{c.courseCode}</span>
                       <div className="text-xs text-slate-400 truncate max-w-[200px]">{c.courseName}</div>
+                      {c.roomCodes && c.roomCodes.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-indigo-300 font-mono mt-1">
+                          <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <span>Room: {c.roomCodes.join(", ")}</span>
+                        </div>
+                      )}
                     </div>
-                    <span
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                        c.category === "lab"
-                          ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                          : "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
-                      }`}
-                    >
-                      {c.category} ({c.thresholdPct}%)
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                          c.category === "lab"
+                            ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                            : "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
+                        }`}
+                      >
+                        {c.category} ({c.thresholdPct}%)
+                      </span>
+                      {onDropCourse && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDropClick(c);
+                          }}
+                          disabled={droppingCourseId === c.courseId}
+                          title="Drop Course"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Percentage */}
@@ -218,16 +264,36 @@ export function AnalyticsView({
                     — {selectedCourse.courseName}
                   </span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Click 'Excuse' to remove a missed class from the percentage math entirely.
-                </p>
+                <div className="flex items-center gap-3 mt-1">
+                  {selectedCourse.roomCodes && selectedCourse.roomCodes.length > 0 && (
+                    <span className="text-xs text-indigo-300 font-mono flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-indigo-400" />
+                      <span>Room: {selectedCourse.roomCodes.join(", ")}</span>
+                    </span>
+                  )}
+                  <p className="text-xs text-slate-400">
+                    Click 'Excuse' to remove a missed class from the percentage math entirely.
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => setSelectedCourse(null)}
-                className="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                {onDropCourse && (
+                  <button
+                    onClick={() => handleDropClick(selectedCourse)}
+                    disabled={droppingCourseId === selectedCourse.courseId}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold border border-rose-500/30 flex items-center gap-1.5 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Drop Course</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedCourse(null)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             <div className="p-6 overflow-y-auto flex-1 space-y-3">
@@ -257,8 +323,8 @@ export function AnalyticsView({
                           <td className="py-2.5 px-3 font-mono font-medium text-slate-200">
                             {dateDisplay}
                           </td>
-                          <td className="py-2.5 px-3 text-slate-400">
-                            {r.classSlot?.startTime} ({r.classSlot?.roomCode || "Class"})
+                          <td className="py-2.5 px-3 text-slate-300 font-mono">
+                            {r.classSlot?.startTime} • <span className="text-indigo-300 font-semibold">Room: {r.classSlot?.roomCode || "N/A"}</span>
                           </td>
                           <td className="py-2.5 px-3 font-semibold capitalize">
                             <span

@@ -250,4 +250,16 @@ class AttendanceRepository(private val context: Context) {
         val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
         dao.getHolidayForDate(dateStr)
     }
+
+    suspend fun dropCourse(courseId: String) = withContext(Dispatchers.IO) {
+        try {
+            val service = apiClient.getService()
+            service.deleteCourse(courseId)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        // Remove locally as well
+        dao.deleteSlotsForCourse(courseId)
+        dao.deleteCourseById(courseId)
+    }
 }

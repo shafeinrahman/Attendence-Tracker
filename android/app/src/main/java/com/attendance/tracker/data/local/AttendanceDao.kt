@@ -29,6 +29,15 @@ interface AttendanceDao {
     @Query("SELECT * FROM courses WHERE id = :courseId")
     suspend fun getCourseById(courseId: String): CourseEntity?
 
+    @Query("DELETE FROM courses WHERE id = :courseId")
+    suspend fun deleteCourseById(courseId: String)
+
+    @Query("DELETE FROM class_slots WHERE courseId = :courseId")
+    suspend fun deleteSlotsForCourse(courseId: String)
+
+    @Query("SELECT * FROM class_slots WHERE courseId = :courseId")
+    suspend fun getSlotsForCourse(courseId: String): List<ClassSlotEntity>
+
     // Class Slots
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSlots(slots: List<ClassSlotEntity>)

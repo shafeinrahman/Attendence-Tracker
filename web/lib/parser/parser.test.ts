@@ -22,6 +22,16 @@ describe("Routine Parser Engine (§4.2)", () => {
       expect(res.category).toBe("unclassified");
       expect(res.thresholdPct).toBe(70);
     });
+
+    it("classifies 6-char alphanumeric room codes e.g. 09A-01C (theory) and AS1-15L (lab)", () => {
+      const theoryRes = classifyByRoomCode("09A-01C");
+      expect(theoryRes.category).toBe("theory");
+      expect(theoryRes.thresholdPct).toBe(70);
+
+      const labRes = classifyByRoomCode("AS1-15L");
+      expect(labRes.category).toBe("lab");
+      expect(labRes.thresholdPct).toBe(90);
+    });
   });
 
   describe("Markdown Table Parser", () => {
@@ -68,6 +78,30 @@ describe("Routine Parser Engine (§4.2)", () => {
       expect(sunSlot?.courseCode).toBe("CSE110");
       expect(sunSlot?.roomCode).toBe("301C");
       expect(sunSlot?.category).toBe("theory");
+    });
+
+    it("parses grid with 6-character alphanumeric room codes (e.g. 09A-01C, AS1-15L)", () => {
+      const md = `
+| Time | Monday | Wednesday |
+|---|---|---|
+| 08:00 - 09:20 | CSE331 09A-01C | CSE331 [09A-01C] |
+| 11:30 - 13:00 | - | CSE420 AS1-15L |
+      `.trim();
+
+      const slots = parseMarkdownRoutine(md);
+      expect(slots.length).toBe(3);
+
+      const slot1 = slots[0];
+      expect(slot1.courseCode).toBe("CSE331");
+      expect(slot1.roomCode).toBe("09A-01C");
+      expect(slot1.category).toBe("theory");
+      expect(slot1.thresholdPct).toBe(70);
+
+      const labSlot = slots.find((s) => s.courseCode === "CSE420");
+      expect(labSlot).toBeDefined();
+      expect(labSlot?.roomCode).toBe("AS1-15L");
+      expect(labSlot?.category).toBe("lab");
+      expect(labSlot?.thresholdPct).toBe(90);
     });
   });
 

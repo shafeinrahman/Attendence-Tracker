@@ -9,6 +9,7 @@ import {
   GraduationCap,
   LogOut,
   User,
+  Smartphone,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -114,6 +115,17 @@ export function Navbar({
 
           {/* Quick Actions & Auth */}
           <div className="flex items-center space-x-3">
+            {/* Download Android App Button */}
+            <a
+              href="/api/app/download"
+              download="AttendanceTracker.apk"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold border border-indigo-500/30 transition shadow-sm"
+              title="Download latest Android app APK"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Get Android App</span>
+            </a>
+
             {/* Export Dropdown */}
             <div className="relative group">
               <button

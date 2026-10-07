@@ -40,6 +40,7 @@ export interface CourseAttendanceStats {
   remainingSlots: number;
   isAtRisk: boolean;
   maxPossiblePercentage: number;
+  roomCodes?: string[];
 }
 
 /**

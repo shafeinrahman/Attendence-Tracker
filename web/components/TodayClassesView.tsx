@@ -156,8 +156,8 @@ export function TodayClassesView({
                           <Globe className="w-3 h-3" /> Online
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium border border-slate-700">
-                          <MapPin className="w-3 h-3" /> {slot.roomCode}
+                        <span className="flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-md bg-slate-800 text-indigo-300 font-mono font-semibold border border-slate-700">
+                          <MapPin className="w-3 h-3 text-indigo-400" /> Room: {slot.roomCode}
                         </span>
                       )}
                     </div>

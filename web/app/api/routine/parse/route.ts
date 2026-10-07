@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { parseMarkdownRoutine, ParsedSlot } from "@/lib/parser/markdown-parser";
-import { parsePdfRoutine } from "@/lib/parser/pdf-parser";
-import { parseImageRoutine } from "@/lib/parser/ocr-parser";
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
@@ -28,24 +26,15 @@ export async function POST(req: NextRequest) {
       if (markdown) {
         slots = parseMarkdownRoutine(markdown);
       } else if (file) {
-        const buffer = Buffer.from(await file.arrayBuffer());
         const fileName = file.name.toLowerCase();
 
         if (fileName.endsWith(".md") || fileName.endsWith(".txt")) {
+          const buffer = Buffer.from(await file.arrayBuffer());
           const text = buffer.toString("utf-8");
           slots = parseMarkdownRoutine(text);
-        } else if (fileName.endsWith(".pdf")) {
-          slots = await parsePdfRoutine(buffer);
-        } else if (
-          fileName.endsWith(".png") ||
-          fileName.endsWith(".jpg") ||
-          fileName.endsWith(".jpeg") ||
-          fileName.endsWith(".webp")
-        ) {
-          slots = await parseImageRoutine(buffer);
         } else {
           return NextResponse.json(
-            { error: "Unsupported file format. Please upload a Markdown table (.md), PDF (.pdf), or Image (.png, .jpg)" },
+            { error: "Only Markdown format is supported for routine ingestion. Please upload a Markdown table file (.md, .txt) or paste Markdown directly." },
             { status: 400 }
           );
         }

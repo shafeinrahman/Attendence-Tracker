@@ -49,7 +49,7 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Go to class: $courseCode")
+            .setContentTitle("Go to class: $courseCode (Room: $roomCode)")
             .setContentText("Room: $roomCode — Starting in 10 minutes")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
@@ -131,8 +131,8 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Off Campus: $courseCode ($roomCode)")
-            .setContentText("Class begins in 10 minutes. Confirm your attendance status:")
+            .setContentTitle("Off Campus: $courseCode (Room: $roomCode)")
+            .setContentText("Room $roomCode — Class begins in 10 minutes. Confirm your attendance status:")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setContentIntent(contentPendingIntent)
             .setAutoCancel(true)
