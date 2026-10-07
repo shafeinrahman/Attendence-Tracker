@@ -378,10 +378,10 @@ export function SemesterConfigView({
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-white tracking-wide">{code}</span>
                     <span className="text-slate-400 truncate max-w-xs">{name}</span>
-                    {c.roomCodes && c.roomCodes.length > 0 && (
+                    {c.roomCodes && c.roomCodes.filter((r: string) => r && !/^-\d+$/.test(r) && r !== "-").length > 0 && (
                       <span className="font-mono text-indigo-300 flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-indigo-400" />
-                        <span>Room: {c.roomCodes.join(", ")}</span>
+                        <span>Room: {c.roomCodes.filter((r: string) => r && !/^-\d+$/.test(r) && r !== "-").join(", ")}</span>
                       </span>
                     )}
                     <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] uppercase border border-slate-700">

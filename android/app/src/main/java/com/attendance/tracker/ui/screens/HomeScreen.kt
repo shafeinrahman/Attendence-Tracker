@@ -194,8 +194,9 @@ fun ClassSlotCard(
                             fontSize = 18.sp,
                             color = Color.White
                         )
+                        val displayRoom = if (slot.roomCode.isNotBlank() && !slot.roomCode.startsWith("-") && slot.roomCode != "-") slot.roomCode else "TBD"
                         Text(
-                            text = if (slot.sessionMode == "online") "ONLINE" else "Room: ${slot.roomCode}",
+                            text = if (slot.sessionMode == "online") "ONLINE" else "Room: $displayRoom",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (slot.sessionMode == "online") Indigo400 else Color.LightGray,

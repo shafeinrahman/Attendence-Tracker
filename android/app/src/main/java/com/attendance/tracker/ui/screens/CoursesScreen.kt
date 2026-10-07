@@ -181,7 +181,7 @@ fun CoursesScreen(
                             color = Color.LightGray
                         )
 
-                        val rooms = courseRooms[course.id] ?: emptyList()
+                        val rooms = (courseRooms[course.id] ?: emptyList()).filter { it.isNotBlank() && !it.startsWith("-") && it != "-" }
                         if (rooms.isNotEmpty()) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,

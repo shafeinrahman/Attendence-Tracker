@@ -157,7 +157,7 @@ export function TodayClassesView({
                         </span>
                       ) : (
                         <span className="flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-md bg-slate-800 text-indigo-300 font-mono font-semibold border border-slate-700">
-                          <MapPin className="w-3 h-3 text-indigo-400" /> Room: {slot.roomCode}
+                          <MapPin className="w-3 h-3 text-indigo-400" /> Room: {slot.roomCode && !/^-\d+$/.test(slot.roomCode) && slot.roomCode !== "-" ? slot.roomCode : "TBD"}
                         </span>
                       )}
                     </div>

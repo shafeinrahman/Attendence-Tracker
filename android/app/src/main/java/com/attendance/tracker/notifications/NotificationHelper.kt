@@ -47,10 +47,14 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val hasRoom = roomCode.isNotBlank() && roomCode != "TBD"
+        val title = if (hasRoom) "Go to class: $courseCode (Room: $roomCode)" else "Go to class: $courseCode"
+        val text = if (hasRoom) "Room: $roomCode — Starting in 10 minutes" else "Starting in 10 minutes"
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Go to class: $courseCode (Room: $roomCode)")
-            .setContentText("Room: $roomCode — Starting in 10 minutes")
+            .setContentTitle(title)
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
@@ -129,10 +133,14 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val hasRoom = roomCode.isNotBlank() && roomCode != "TBD"
+        val title = if (hasRoom) "Off Campus: $courseCode (Room: $roomCode)" else "Off Campus: $courseCode"
+        val text = if (hasRoom) "Room $roomCode — Class begins in 10 minutes. Confirm your attendance status:" else "Class begins in 10 minutes. Confirm your attendance status:"
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Off Campus: $courseCode (Room: $roomCode)")
-            .setContentText("Room $roomCode — Class begins in 10 minutes. Confirm your attendance status:")
+            .setContentTitle(title)
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setContentIntent(contentPendingIntent)
             .setAutoCancel(true)

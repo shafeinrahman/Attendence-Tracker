@@ -161,10 +161,10 @@ export function AnalyticsView({
                     <div>
                       <span className="text-base font-bold text-white">{c.courseCode}</span>
                       <div className="text-xs text-slate-400 truncate max-w-[200px]">{c.courseName}</div>
-                      {c.roomCodes && c.roomCodes.length > 0 && (
+                      {c.roomCodes && c.roomCodes.filter((r: string) => r && !/^-\d+$/.test(r) && r !== "-").length > 0 && (
                         <div className="flex items-center gap-1.5 text-xs text-indigo-300 font-mono mt-1">
                           <MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                          <span>Room: {c.roomCodes.join(", ")}</span>
+                          <span>Room: {c.roomCodes.filter((r: string) => r && !/^-\d+$/.test(r) && r !== "-").join(", ")}</span>
                         </div>
                       )}
                     </div>
@@ -265,10 +265,10 @@ export function AnalyticsView({
                   </span>
                 </h3>
                 <div className="flex items-center gap-3 mt-1">
-                  {selectedCourse.roomCodes && selectedCourse.roomCodes.length > 0 && (
+                  {selectedCourse.roomCodes && selectedCourse.roomCodes.filter((r: string) => r && !/^-\d+$/.test(r) && r !== "-").length > 0 && (
                     <span className="text-xs text-indigo-300 font-mono flex items-center gap-1">
                       <MapPin className="w-3 h-3 text-indigo-400" />
-                      <span>Room: {selectedCourse.roomCodes.join(", ")}</span>
+                      <span>Room: {selectedCourse.roomCodes.filter((r: string) => r && !/^-\d+$/.test(r) && r !== "-").join(", ")}</span>
                     </span>
                   )}
                   <p className="text-xs text-slate-400">
