@@ -51,6 +51,7 @@ export function SemesterConfigView({
     activeSemester?.midtermWeekEnd
       ? new Date(activeSemester.midtermWeekEnd).toISOString().slice(0, 10)
       : ""
+  );
   const [countFirstWeek, setCountFirstWeek] = React.useState(
     Boolean(activeSemester?.countFirstWeek)
   );
