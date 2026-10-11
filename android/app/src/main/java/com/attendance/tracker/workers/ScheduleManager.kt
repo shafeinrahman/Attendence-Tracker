@@ -52,6 +52,47 @@ object ScheduleManager {
                     workRequest
                 )
             }
+
+            // 2. Schedule Auto-Attendance at exact start of class time:
+            val startCalendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startDelayMillis = startCalendar.timeInMillis - now.timeInMillis
+
+            val endParts = slot.endTime.split(":")
+            val endHour = if (endParts.size == 2) endParts[0].toIntOrNull() ?: (hour + 1) else (hour + 1)
+            val endMinute = if (endParts.size == 2) endParts[1].toIntOrNull() ?: minute else minute
+            val endCalendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, endHour)
+                set(Calendar.MINUTE, endMinute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            // If class start is in the future, schedule for start time.
+            // If class has already started today and is currently ongoing, check immediately (delay 0)!
+            if (startDelayMillis > 0 || (now.timeInMillis in startCalendar.timeInMillis..endCalendar.timeInMillis)) {
+                val effectiveDelay = if (startDelayMillis > 0) startDelayMillis else 0L
+                val inputData = Data.Builder()
+                    .putString(ClassStartAttendanceWorker.KEY_SLOT_ID, slot.id)
+                    .putString(ClassStartAttendanceWorker.KEY_DATE, todayDateStr)
+                    .build()
+
+                val workRequest = OneTimeWorkRequestBuilder<ClassStartAttendanceWorker>()
+                    .setInitialDelay(effectiveDelay, TimeUnit.MILLISECONDS)
+                    .setInputData(inputData)
+                    .build()
+
+                val uniqueWorkName = "start_attendance_${slot.id}_$todayDateStr"
+                workManager.enqueueUniqueWork(
+                    uniqueWorkName,
+                    ExistingWorkPolicy.REPLACE,
+                    workRequest
+                )
+            }
         }
     }
 }

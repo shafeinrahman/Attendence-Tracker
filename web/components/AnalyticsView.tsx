@@ -24,6 +24,7 @@ interface AnalyticsViewProps {
     percentage: number;
   };
   onExcuseToggle: (recordId: string, currentStatus: string) => Promise<void>;
+  onUpdateRecordFlags?: (recordId: string, updates: { countedInStats?: boolean; isFirstWeek?: boolean }) => Promise<void>;
   fetchCourseRecords: (courseId: string) => Promise<any[]>;
   onDropCourse?: (courseId: string) => Promise<void>;
   loading: boolean;
@@ -33,6 +34,7 @@ export function AnalyticsView({
   courses,
   overall,
   onExcuseToggle,
+  onUpdateRecordFlags,
   fetchCourseRecords,
   onDropCourse,
   loading,
@@ -343,16 +345,43 @@ export function AnalyticsView({
                               {r.status.replace("_", " ")}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-[11px] text-slate-400">
-                            {r.isFirstWeek && (
-                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 mr-1">First Week</span>
-                            )}
-                            {r.isMidtermWeek && (
-                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 mr-1">Midterm Week</span>
-                            )}
-                            {!r.countedInStats && !r.isFirstWeek && !r.isMidtermWeek && (
-                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Excluded</span>
-                            )}
+                          <td className="py-2.5 px-3 text-[11px]">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {r.isFirstWeek && (
+                                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">First Week</span>
+                              )}
+                              {r.isMidtermWeek && (
+                                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">Midterm Week</span>
+                              )}
+                              {onUpdateRecordFlags ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await onUpdateRecordFlags(r.id, { countedInStats: !r.countedInStats });
+                                    if (selectedCourse) {
+                                      const updated = await fetchCourseRecords(selectedCourse.courseId);
+                                      setCourseRecords(updated);
+                                    }
+                                  }}
+                                  title="Click to toggle whether this record is counted in attendance statistics"
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition border ${
+                                    r.countedInStats
+                                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                      : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-slate-200"
+                                  }`}
+                                >
+                                  {r.countedInStats ? "Counted in Stats" : "Excluded from Stats"}
+                                </button>
+                              ) : (
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                    r.countedInStats ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-800 text-slate-400"
+                                  }`}
+                                >
+                                  {r.countedInStats ? "Counted" : "Excluded"}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2.5 px-3 text-right">
                             {isAbsent && (

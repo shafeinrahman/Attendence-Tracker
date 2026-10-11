@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
           targetDate <= new Date(activeSemester.midtermWeekEnd);
       }
 
-      const countedInStats = !isFirstWeek && !isMidtermWeek;
+      const countedInStats = (!isFirstWeek || activeSemester.countFirstWeek) && !isMidtermWeek;
 
       // If past date, lazily default any unrecorded slot to 'absent'
       if (isPastDate) {
@@ -183,7 +183,8 @@ export async function POST(req: NextRequest) {
         targetDate <= new Date(activeSemester.midtermWeekEnd);
     }
 
-    const countedInStats = !isFirstWeek && !isMidtermWeek;
+    const calculatedCounted = (!isFirstWeek || activeSemester.countFirstWeek) && !isMidtermWeek;
+    const countedInStats = body.countedInStats !== undefined ? Boolean(body.countedInStats) : calculatedCounted;
 
     // Handle "Skip Today" (Bulk Skip) (§4.11)
     if (isBulkSkip && !classSlotId) {
@@ -291,10 +292,10 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { id, status } = body;
+    const { id, status, countedInStats, isFirstWeek, isMidtermWeek } = body;
 
-    if (!id || !status) {
-      return NextResponse.json({ error: "id and status are required" }, { status: 400 });
+    if (!id || (status === undefined && countedInStats === undefined && isFirstWeek === undefined && isMidtermWeek === undefined)) {
+      return NextResponse.json({ error: "id and at least one field to update are required" }, { status: 400 });
     }
 
     // Verify record ownership
@@ -324,12 +325,17 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    const dataToUpdate: any = {
+      loggedAt: new Date(),
+    };
+    if (status !== undefined) dataToUpdate.status = status;
+    if (countedInStats !== undefined) dataToUpdate.countedInStats = Boolean(countedInStats);
+    if (isFirstWeek !== undefined) dataToUpdate.isFirstWeek = Boolean(isFirstWeek);
+    if (isMidtermWeek !== undefined) dataToUpdate.isMidtermWeek = Boolean(isMidtermWeek);
+
     const record = await prisma.attendanceRecord.update({
       where: { id },
-      data: {
-        status,
-        loggedAt: new Date(),
-      },
+      data: dataToUpdate,
       include: {
         classSlot: { include: { course: true } },
       },

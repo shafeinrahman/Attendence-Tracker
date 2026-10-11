@@ -28,6 +28,7 @@ model Semester {
   endDate            DateTime        @map("end_date")
   midtermWeekStart   DateTime?       @map("midterm_week_start")
   midtermWeekEnd     DateTime?       @map("midterm_week_end")
+  countFirstWeek     Boolean         @default(false) @map("count_first_week")
   purgeAt            DateTime        @map("purge_at") // endDate + 7 days
   purged             Boolean         @default(false)
   createdAt          DateTime        @default(now()) @map("created_at")

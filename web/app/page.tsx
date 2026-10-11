@@ -255,6 +255,25 @@ export default function DashboardPage() {
     }
   };
 
+  // Handler: Update Attendance Record Flags (e.g., Counted in Stats)
+  const handleUpdateRecordFlags = async (recordId: string, updates: { countedInStats?: boolean; isFirstWeek?: boolean }) => {
+    const res = await fetch("/api/attendance", {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify({
+        id: recordId,
+        ...updates,
+      }),
+    });
+
+    if (res.ok) {
+      await fetchData();
+    } else {
+      const err = await res.json();
+      alert(`Failed to update attendance flags: ${err.error}`);
+    }
+  };
+
   // Handler: Export CSV or JSON
   const handleExport = async (format: "json" | "csv") => {
     window.open(`/api/export?format=${format}`, "_blank");
@@ -375,6 +394,7 @@ export default function DashboardPage() {
             courses={analyticsData.courses}
             overall={analyticsData.overall}
             onExcuseToggle={handleExcuseToggle}
+            onUpdateRecordFlags={handleUpdateRecordFlags}
             fetchCourseRecords={handleFetchCourseRecords}
             onDropCourse={handleDropCourse}
             loading={loading}

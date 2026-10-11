@@ -90,6 +90,7 @@ export async function GET(req: NextRequest) {
         endDate: activeSemester.endDate,
         midtermWeekStart: activeSemester.midtermWeekStart,
         midtermWeekEnd: activeSemester.midtermWeekEnd,
+        countFirstWeek: activeSemester.countFirstWeek,
         purgeAt: activeSemester.purgeAt,
       },
       geofence: activeSemester.geofence,

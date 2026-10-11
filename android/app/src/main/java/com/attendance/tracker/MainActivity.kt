@@ -134,6 +134,49 @@ class MainActivity : ComponentActivity() {
                 isHoliday = hol != null
                 holidayLabel = hol?.label
 
+                // Auto-assign any current class to present if inside campus at start of class time
+                if (prefs.isInsideCampus && hol == null) {
+                    val now = Calendar.getInstance()
+                    var newlyMarked = false
+                    for (slot in slots) {
+                        if (slot.sessionMode == "online") continue
+                        if (recordMap[slot.id] == null) {
+                            val startParts = slot.startTime.split(":")
+                            val endParts = slot.endTime.split(":")
+                            if (startParts.size == 2) {
+                                val sHour = startParts[0].toIntOrNull() ?: continue
+                                val sMinute = startParts[1].toIntOrNull() ?: continue
+                                val eHour = if (endParts.size == 2) endParts[0].toIntOrNull() ?: (sHour + 1) else (sHour + 1)
+                                val eMinute = if (endParts.size == 2) endParts[1].toIntOrNull() ?: sMinute else sMinute
+
+                                val sCal = Calendar.getInstance().apply {
+                                    set(Calendar.HOUR_OF_DAY, sHour)
+                                    set(Calendar.MINUTE, sMinute)
+                                    set(Calendar.SECOND, 0)
+                                    set(Calendar.MILLISECOND, 0)
+                                }
+                                val eCal = Calendar.getInstance().apply {
+                                    set(Calendar.HOUR_OF_DAY, eHour)
+                                    set(Calendar.MINUTE, eMinute)
+                                    set(Calendar.SECOND, 0)
+                                    set(Calendar.MILLISECOND, 0)
+                                }
+                                if (now.timeInMillis in sCal.timeInMillis..eCal.timeInMillis) {
+                                    repository.recordAttendance(slot.id, todayStr, "present", "phone")
+                                    newlyMarked = true
+                                }
+                            }
+                        }
+                    }
+                    if (newlyMarked) {
+                        val refreshedRecords = db.attendanceDao().getRecordsForDate(todayStr)
+                        val refreshedMap = refreshedRecords.associateBy { it.classSlotId }
+                        todaySlotsWithStatus = slots.map { slot ->
+                            slot to refreshedMap[slot.id]?.status
+                        }
+                    }
+                }
+
                 val allSlots = db.attendanceDao().getAllSlots()
                 courseRooms = allSlots
                     .groupBy({ it.courseId }, { it.roomCode })

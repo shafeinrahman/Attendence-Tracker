@@ -137,4 +137,88 @@ describe("System Specifications & Edge Cases Verification (§4, §7)", () => {
       expect(stats2.currentPercentage).toBe(100);
     });
   });
+
+  describe("First Week & Flag Configurability (Faculty Counts First Week)", () => {
+    it("excludes first week records when countedInStats = false", () => {
+      const records: AttendanceRecordLike[] = [
+        { status: "present", countedInStats: false, isFirstWeek: true },
+        { status: "absent", countedInStats: false, isFirstWeek: true },
+        { status: "present", countedInStats: true, isFirstWeek: false },
+      ];
+
+      const stats = calculateCourseStats({
+        courseId: "c1",
+        courseCode: "CSE331",
+        courseName: "Algorithms",
+        category: "theory",
+        thresholdPct: 70,
+        records,
+        remainingSlots: 5,
+      });
+
+      expect(stats.held).toBe(1);
+      expect(stats.attended).toBe(1);
+      expect(stats.currentPercentage).toBe(100);
+    });
+
+    it("includes first week records when countedInStats = true because faculty counts first week", () => {
+      const records: AttendanceRecordLike[] = [
+        { status: "present", countedInStats: true, isFirstWeek: true },
+        { status: "absent", countedInStats: true, isFirstWeek: true },
+        { status: "present", countedInStats: true, isFirstWeek: false },
+      ];
+
+      const stats = calculateCourseStats({
+        courseId: "c1",
+        courseCode: "CSE331",
+        courseName: "Algorithms",
+        category: "theory",
+        thresholdPct: 70,
+        records,
+        remainingSlots: 5,
+      });
+
+      // All 3 records count in stats: 2 present, 1 absent -> held = 3, attended = 2
+      expect(stats.held).toBe(3);
+      expect(stats.attended).toBe(2);
+      expect(stats.absent).toBe(1);
+      expect(stats.currentPercentage).toBeCloseTo(66.67, 1);
+    });
+
+    it("dynamically changes percentage when first week record flag is toggled", () => {
+      const records: AttendanceRecordLike[] = [
+        { status: "absent", countedInStats: false, isFirstWeek: true },
+        { status: "present", countedInStats: true, isFirstWeek: false },
+      ];
+
+      const statsBefore = calculateCourseStats({
+        courseId: "c1",
+        courseCode: "CSE331",
+        courseName: "Algorithms",
+        category: "theory",
+        thresholdPct: 70,
+        records,
+        remainingSlots: 5,
+      });
+      expect(statsBefore.held).toBe(1);
+      expect(statsBefore.currentPercentage).toBe(100);
+
+      // Student/faculty updates flag to count the first week absent:
+      records[0].countedInStats = true;
+
+      const statsAfter = calculateCourseStats({
+        courseId: "c1",
+        courseCode: "CSE331",
+        courseName: "Algorithms",
+        category: "theory",
+        thresholdPct: 70,
+        records,
+        remainingSlots: 5,
+      });
+      expect(statsAfter.held).toBe(2);
+      expect(statsAfter.attended).toBe(1);
+      expect(statsAfter.absent).toBe(1);
+      expect(statsAfter.currentPercentage).toBe(50);
+    });
+  });
 });

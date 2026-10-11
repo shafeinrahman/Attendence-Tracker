@@ -33,14 +33,47 @@ class AttendanceRepository(private val context: Context) {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
 
+        val sem = dao.getActiveSemester()
+        var isFirstWeek = false
+        var isMidtermWeek = false
+        if (sem != null) {
+            try {
+                val sDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date)
+                val semStart = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(sem.startDate.slice(0..9))
+                if (sDate != null && semStart != null) {
+                    val diffDays = (sDate.time - semStart.time) / (1000 * 60 * 60 * 24)
+                    isFirstWeek = diffDays in 0..6
+                }
+                if (sem.midtermWeekStart != null && sem.midtermWeekEnd != null && sDate != null) {
+                    val mStart = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(sem.midtermWeekStart.slice(0..9))
+                    val mEnd = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(sem.midtermWeekEnd.slice(0..9))
+                    if (mStart != null && mEnd != null) {
+                        isMidtermWeek = sDate.time in mStart.time..mEnd.time
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore parse errors
+            }
+        }
+
+        val countedInStats = if (status in listOf("cancelled_holiday", "excused")) {
+            false
+        } else if (isMidtermWeek) {
+            false
+        } else if (isFirstWeek && sem?.countFirstWeek != true) {
+            false
+        } else {
+            true
+        }
+
         val record = AttendanceRecordEntity(
             id = UUID.randomUUID().toString(),
             classSlotId = slotId,
             date = date,
             status = status,
-            countedInStats = status !in listOf("cancelled_holiday", "excused"),
-            isFirstWeek = false,
-            isMidtermWeek = false,
+            countedInStats = countedInStats,
+            isFirstWeek = isFirstWeek,
+            isMidtermWeek = isMidtermWeek,
             isBulkSkip = isBulkSkip,
             loggedAt = nowIso,
             source = source
@@ -130,6 +163,7 @@ class AttendanceRepository(private val context: Context) {
                             endDate = sem.endDate,
                             midtermWeekStart = sem.midtermWeekStart,
                             midtermWeekEnd = sem.midtermWeekEnd,
+                            countFirstWeek = sem.countFirstWeek ?: false,
                             purgeAt = sem.purgeAt,
                             isPurged = false
                         )

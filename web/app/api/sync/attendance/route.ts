@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
           targetDate <= new Date(activeSemester.midtermWeekEnd);
       }
 
-      const countedInStats = !isFirstWeek && !isMidtermWeek;
+      const defaultCounted = (!isFirstWeek || activeSemester.countFirstWeek) && !isMidtermWeek;
+      const countedInStats = item.countedInStats !== undefined ? Boolean(item.countedInStats) : defaultCounted;
 
       const record = await prisma.attendanceRecord.upsert({
         where: {

@@ -74,11 +74,12 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { name, startDate, endDate, midtermWeekStart, midtermWeekEnd, geofence } = body;
+    const { name, startDate, endDate, midtermWeekStart, midtermWeekEnd, countFirstWeek, geofence } = body;
 
     const dataToUpdate: any = {};
     if (name) dataToUpdate.name = name;
     if (startDate) dataToUpdate.startDate = new Date(startDate);
+    if (countFirstWeek !== undefined) dataToUpdate.countFirstWeek = Boolean(countFirstWeek);
 
     // Extending / updating end date: automatically recompute purgeAt = endDate + 7 days
     if (endDate) {
@@ -94,6 +95,8 @@ export async function PATCH(
     if (midtermWeekEnd !== undefined) {
       dataToUpdate.midtermWeekEnd = midtermWeekEnd ? new Date(midtermWeekEnd) : null;
     }
+
+    const firstWeekChanged = countFirstWeek !== undefined || startDate !== undefined;
 
     const updated = await prisma.semester.update({
       where: { id },
@@ -121,15 +124,42 @@ export async function PATCH(
       });
     }
 
-    // Retroactive update for midterm week: §4.1
-    if (midtermChanged) {
+    // Retroactive update for flags (midterm week, first week): §4.1
+    if (midtermChanged || firstWeekChanged) {
       const slotIds = existing.courses.flatMap((c) => c.slots.map((s) => s.id));
       if (slotIds.length > 0) {
+        const semStart = new Date(updated.startDate);
+        const firstWeekEnd = new Date(semStart.getTime() + 7 * 24 * 60 * 60 * 1000);
         const mStart = updated.midtermWeekStart;
         const mEnd = updated.midtermWeekEnd;
 
+        // 1. Reconcile isFirstWeek flags
+        await prisma.attendanceRecord.updateMany({
+          where: {
+            classSlotId: { in: slotIds },
+            date: {
+              gte: semStart,
+              lt: firstWeekEnd,
+            },
+          },
+          data: {
+            isFirstWeek: true,
+          },
+        });
+
+        await prisma.attendanceRecord.updateMany({
+          where: {
+            classSlotId: { in: slotIds },
+            isFirstWeek: true,
+            OR: [{ date: { lt: semStart } }, { date: { gte: firstWeekEnd } }],
+          },
+          data: {
+            isFirstWeek: false,
+          },
+        });
+
+        // 2. Reconcile isMidtermWeek flags
         if (mStart && mEnd) {
-          // 1. Records falling in the midterm range -> isMidtermWeek = true, countedInStats = false
           await prisma.attendanceRecord.updateMany({
             where: {
               classSlotId: { in: slotIds },
@@ -144,7 +174,6 @@ export async function PATCH(
             },
           });
 
-          // 2. Records falling OUTSIDE the new midterm range that were previously flagged
           await prisma.attendanceRecord.updateMany({
             where: {
               classSlotId: { in: slotIds },
@@ -153,11 +182,9 @@ export async function PATCH(
             },
             data: {
               isMidtermWeek: false,
-              countedInStats: true, // will be corrected if isFirstWeek
             },
           });
         } else {
-          // Midterm week cleared
           await prisma.attendanceRecord.updateMany({
             where: {
               classSlotId: { in: slotIds },
@@ -165,19 +192,43 @@ export async function PATCH(
             },
             data: {
               isMidtermWeek: false,
-              countedInStats: true,
             },
           });
         }
 
-        // Ensure any first-week records remain countedInStats = false
+        // 3. Reconcile countedInStats based on flags and countFirstWeek setting
+        // Midterm week records are always excluded
+        await prisma.attendanceRecord.updateMany({
+          where: {
+            classSlotId: { in: slotIds },
+            isMidtermWeek: true,
+          },
+          data: {
+            countedInStats: false,
+          },
+        });
+
+        // First week records (not in midterm week) follow the countFirstWeek setting
         await prisma.attendanceRecord.updateMany({
           where: {
             classSlotId: { in: slotIds },
             isFirstWeek: true,
+            isMidtermWeek: false,
           },
           data: {
-            countedInStats: false,
+            countedInStats: updated.countFirstWeek,
+          },
+        });
+
+        // Normal semester records are counted in stats
+        await prisma.attendanceRecord.updateMany({
+          where: {
+            classSlotId: { in: slotIds },
+            isFirstWeek: false,
+            isMidtermWeek: false,
+          },
+          data: {
+            countedInStats: true,
           },
         });
       }

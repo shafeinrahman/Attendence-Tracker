@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS "semesters" (
     "end_date" TIMESTAMP(3) NOT NULL,
     "midterm_week_start" TIMESTAMP(3),
     "midterm_week_end" TIMESTAMP(3),
+    "count_first_week" BOOLEAN NOT NULL DEFAULT false,
     "purge_at" TIMESTAMP(3) NOT NULL,
     "purged" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, startDate, endDate, midtermWeekStart, midtermWeekEnd, geofence } = body;
+    const { name, startDate, endDate, midtermWeekStart, midtermWeekEnd, countFirstWeek, geofence } = body;
 
     if (!name || !startDate || !endDate) {
       return NextResponse.json(
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
         endDate: end,
         midtermWeekStart: midtermWeekStart ? new Date(midtermWeekStart) : null,
         midtermWeekEnd: midtermWeekEnd ? new Date(midtermWeekEnd) : null,
+        countFirstWeek: Boolean(countFirstWeek),
         purgeAt,
         purged: false,
         ...(geofence && {

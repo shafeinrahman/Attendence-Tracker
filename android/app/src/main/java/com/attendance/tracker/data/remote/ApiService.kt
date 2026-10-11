@@ -60,6 +60,7 @@ data class SemesterDto(
     val endDate: String,
     val midtermWeekStart: String?,
     val midtermWeekEnd: String?,
+    val countFirstWeek: Boolean? = false,
     val purgeAt: String
 )
 

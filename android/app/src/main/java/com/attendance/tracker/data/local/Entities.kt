@@ -11,6 +11,7 @@ data class SemesterEntity(
     val endDate: String,
     val midtermWeekStart: String?,
     val midtermWeekEnd: String?,
+    val countFirstWeek: Boolean = false,
     val purgeAt: String,
     val isPurged: Boolean = false
 )

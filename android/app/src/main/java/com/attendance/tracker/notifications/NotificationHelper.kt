@@ -65,6 +65,41 @@ object NotificationHelper {
     }
 
     /**
+     * Auto Attendance notification:
+     * Inside geofence at start of class -> automatically logs Present.
+     */
+    fun showAutoAttendanceNotification(
+        context: Context,
+        notificationId: Int,
+        courseCode: String,
+        roomCode: String
+    ) {
+        val openAppIntent = Intent(context, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val hasRoom = roomCode.isNotBlank() && roomCode != "TBD" && !roomCode.startsWith("-")
+        val title = "Auto-Attendance: Marked Present ($courseCode)"
+        val text = if (hasRoom) "You are on campus (Room $roomCode). Marked Present automatically." else "You are on campus. Marked Present for $courseCode automatically."
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(notificationId, notification)
+    }
+
+    /**
      * Actionable notification (§4.4):
      * Outside geofence -> actionable notification with three buttons:
      * - "Running Late" -> status = "running_late"
